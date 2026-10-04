@@ -527,48 +527,6 @@ describe("UsernameInput clan tag picker", () => {
     expect(el.getClanTag()).toBe("OF");
   });
 
-  it("opens the clan modal on its browse tab from Browse clans", async () => {
-    // Registered, not just created: the component waits on whenDefined, the
-    // same way the existing join-modal path does.
-    const opened: unknown[] = [];
-    if (!customElements.get("clan-modal")) {
-      customElements.define(
-        "clan-modal",
-        class extends HTMLElement {
-          open(args: unknown) {
-            opened.push(args);
-          }
-        },
-      );
-    }
-    const modal = document.createElement("clan-modal") as HTMLElement & {
-      open: (args: unknown) => void;
-    };
-    // The registered class pushes to whichever `opened` array the current run
-    // closed over, so re-point it for this instance.
-    modal.open = (args) => opened.push(args);
-    document.body.appendChild(modal);
-    const pages: string[] = [];
-    (window as unknown as { showPage?: (p: string) => void }).showPage = (p) =>
-      pages.push(p);
-
-    const el = await mount();
-    await signIn(el, premiumUser());
-    q(el, "#clan-tag-button")!.click();
-    await el.updateComplete;
-    const browse = [...el.querySelectorAll("#clan-tag-menu button")].find((b) =>
-      b.textContent?.includes("username.clan_browse"),
-    ) as HTMLElement;
-    browse.click();
-    await customElements.whenDefined("clan-modal").catch(() => undefined);
-    await new Promise((r) => setTimeout(r, 0));
-
-    expect(pages).toContain("page-clan");
-    // Without the tab the modal lands on its default my-clans view, which is
-    // not what the action is labelled.
-    expect(opened).toEqual([{ tab: "browse" }]);
-  });
-
   it("closes on Escape while the trigger still holds focus", async () => {
     const el = await mount();
     await signIn(el, premiumUser([{ tag: "OF", name: "OpenFront Official" }]));
@@ -713,14 +671,14 @@ describe("UsernameInput verified name", () => {
     expect(el.isVerified()).toBe(false);
   });
 
-  it("renders the free-text field and an off-state toggle when ineligible", async () => {
+  it("renders the free-text field and no verified toggle when ineligible", async () => {
     const el = await mount();
     await signIn(el, {
       player: { username: null, usernameBase: null, usernameStatus: "none" },
     } as unknown as UserMeResponse);
 
     expect(el.isVerified()).toBe(false);
-    expect(q(el, TOGGLE)).not.toBeNull();
+    expect(q(el, TOGGLE)).toBeNull();
     expect(q(el, CHANGE)).toBeNull();
   });
 
@@ -1119,35 +1077,7 @@ describe("UsernameInput held bare name", () => {
     await signIn(el, heldNameUser());
     expect(el.isVerified()).toBe(false);
     expect(el.getUsername()).toBe("MyCoolName");
-    expect(q(el, TOGGLE)).not.toBeNull();
-  });
-
-  it("explains the held name and offers the rename form", async () => {
-    const el = await mount();
-    await signIn(el, heldNameUser());
-    expect(q(el, TOGGLE)!.getAttribute("title")).toContain(
-      "username.verified_held_hint",
-    );
-
-    showInGameConfirm.mockResolvedValueOnce(true);
-    q(el, TOGGLE)!.click();
-    await settle();
-
-    expect(showInGameConfirm).toHaveBeenCalledTimes(1);
-    expect(showInGameConfirm.mock.calls[0][0]).toContain(
-      'username.verified_held_body:{"name":"RyanTheGreat"}',
-    );
-    expect(window.location.hash).toBe("#modal=change-username");
-    expect(el.isVerified()).toBe(false);
-  });
-
-  it("stays put when the player declines the rename", async () => {
-    const el = await mount();
-    await signIn(el, heldNameUser());
-    window.location.hash = "";
-    q(el, TOGGLE)!.click();
-    await settle();
-    expect(window.location.hash).toBe("");
-    expect(el.isVerified()).toBe(false);
+    // Not eligible, and there is no account upsell to offer instead.
+    expect(q(el, TOGGLE)).toBeNull();
   });
 });

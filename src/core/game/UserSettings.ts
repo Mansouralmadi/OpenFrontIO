@@ -177,6 +177,7 @@ export const COLOR_KEY = "settings.territoryColor";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
 export const GRAPHICS_KEY = "settings.graphics";
+export const DARK_MODE_KEY = "settings.darkMode";
 export const GRAPHICS_PRESETS_KEY = "settings.graphicsPresets";
 export const EFFECTS_KEY = "settings.effects";
 /** Saved cosmetic loadouts — see {@link CosmeticLoadout}. */
@@ -486,6 +487,15 @@ export class UserSettings {
 
   toggleHelpMessages() {
     this.setBool("settings.helpMessages", !this.helpMessages());
+  }
+
+  /** Dark map palette and dark UI panels. On by default. */
+  darkMode() {
+    return this.getBool(DARK_MODE_KEY, true);
+  }
+
+  toggleDarkMode() {
+    this.setBool(DARK_MODE_KEY, !this.darkMode());
   }
 
   tutorialDismissed() {

@@ -73,6 +73,11 @@
   color: #000;
 }
 
+.dark .player-search-input {
+  background-color: #1f2937;
+  color: #fff;
+}
+
 .player-scroll-area {
   max-height: 240px;
   overflow-y: auto;

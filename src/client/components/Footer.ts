@@ -3,7 +3,6 @@ import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../core/AssetUrls";
 import { composeVersionDisplay, desktopVersion } from "../DesktopShell";
 import { currentGameVersion } from "../GameVersion";
-import "./SteamWishlistButton";
 
 @customElement("page-footer")
 export class Footer extends LitElement {
@@ -34,9 +33,7 @@ export class Footer extends LitElement {
       <footer
         class="[.in-game_&]:hidden bg-zinc-900/90 backdrop-blur-md flex flex-col items-center justify-center gap-1 pt-1 pb-3 text-white/50 w-full border-t border-white/10 shrink-0 relative z-50 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center lg:gap-0"
       >
-        <!-- Icons and legal links stay centred on the bar; on desktop they
-             share it with the Steam promo, which gets its own grid column so
-             the two can never overlap however wide a translation runs. -->
+        <!-- Icons and legal links stay centred on the bar. -->
         <div
           class="flex w-full flex-col items-center gap-1 lg:col-start-2 lg:w-auto"
         >
@@ -126,17 +123,6 @@ export class Footer extends LitElement {
               class="hover:text-white transition-colors"
             ></a>
           </div>
-        </div>
-
-        <!-- Phones keep the full store widget on the play page instead; there
-             is no room for it here. -->
-        <div
-          class="hidden lg:flex lg:col-start-3 lg:items-center lg:justify-end lg:pt-2 lg:pr-20"
-        >
-          <steam-wishlist-button
-            campaign="home_desktop"
-            class="min-w-0 flex-1 max-w-[544px]"
-          ></steam-wishlist-button>
         </div>
 
         <!-- Single instance: translateText() resolves the active language via

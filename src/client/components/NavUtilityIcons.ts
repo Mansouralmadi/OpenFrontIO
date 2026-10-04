@@ -4,15 +4,13 @@ import { desktopQuit, requestDesktopQuit } from "../DesktopShell";
 import { NavNotificationsController } from "./NavNotificationsController";
 
 /**
- * The news bell, help "?", settings cogwheel and (on the desktop shell) a
- * power button as icon buttons, with the notification dots the first two carry.
+ * The help "?", settings cogwheel and (on the desktop shell) a power button
+ * as icon buttons, with the notification dot the help button carries.
  *
  * Shared by the desktop nav bar and the mobile top bar so both read as the same
- * cluster next to the profile control — they're utility affordances rather than
- * page links, which is why they've left the nav item lists. The cogwheel sits
- * last among the page links, immediately left of the profile control, and is a
- * plain page link with no auth dependency: it looks and behaves the same
- * signed in or out. The power button, when it renders, sits right after it.
+ * cluster — they're utility affordances rather than page links, which is why
+ * they've left the nav item lists. The power button, when it renders, sits
+ * right after the cogwheel.
  */
 @customElement("nav-utility-icons")
 export class NavUtilityIcons extends LitElement {
@@ -113,35 +111,6 @@ export class NavUtilityIcons extends LitElement {
     const currentPage = window.currentPageId;
     return html`
       <div class="flex items-center gap-1">
-        <div class="relative">
-          <button
-            class="${this.buttonClass()} ${currentPage === "page-news"
-              ? "active"
-              : ""}"
-            data-page="page-news"
-            data-i18n-aria-label="main.news"
-            data-i18n-title="main.news"
-            @click=${this._notifications.onNewsClick}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="w-6 h-6 pointer-events-none"
-              aria-hidden="true"
-            >
-              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-          </button>
-          ${this._notifications.showNewsDot()
-            ? this.renderDot("bg-red-500")
-            : ""}
-        </div>
         <div class="relative">
           <button
             class="${this.buttonClass()} ${currentPage === "page-help"
