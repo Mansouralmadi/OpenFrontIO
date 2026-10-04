@@ -93,11 +93,9 @@ export class TrainExecution implements Execution {
       }
       pathTiles.push(...segment.getTiles());
     }
-    const startTile = this.train.tile();
-    if (pathTiles.length === 0 || pathTiles[0] !== startTile) {
-      pathTiles.unshift(startTile);
-      this.pathIndex = 1;
-    }
+    // The path is exactly the railroad tiles the sim walks (it indexes them
+    // from 0). Prepending an off-rail spawn tile here put the client's plan
+    // one tile behind the sim for trains spawned beside the rail.
     this.pathTiles = pathTiles;
 
     const plan: MotionPlanRecord = {

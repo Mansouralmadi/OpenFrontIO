@@ -1,4 +1,5 @@
 import { renderDuration, translateText } from "../../client/Utils";
+import { DEFAULT_ALLIANCE_DURATION_MINUTES } from "../../core/configuration/DiplomacyConstants";
 import {
   Difficulty,
   GameMapSize,
@@ -84,9 +85,9 @@ export function notableLobbySettings(
     });
   else if (
     typeof c.customAllianceDuration === "number" &&
-    // 5 minutes is the sim fallback (Config.allianceDuration), so an
-    // explicit 5 changes nothing worth surfacing.
-    c.customAllianceDuration !== 5
+    // The sim fallback (Config.allianceDuration) changes nothing worth
+    // surfacing.
+    c.customAllianceDuration !== DEFAULT_ALLIANCE_DURATION_MINUTES
   )
     items.push({
       label: translateText("public_game_modifier.disable_alliances_label"),

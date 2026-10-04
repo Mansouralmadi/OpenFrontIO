@@ -1,5 +1,5 @@
 /**
- * Long real-world fixture: impossible nations on the world map for ~7 game
+ * Long real-world fixture: impossible nations on the world map for ~11 game
  * minutes - long enough for ports, trade ships, factories and trains (rail
  * motion plans). Players and units are checked against the live game every
  * tick; full-map tiles are sampled (the map is 2M tiles).
@@ -59,7 +59,7 @@ test("world map nations: trade ships and trains round-trip", async () => {
 
   let spawnEnded = false;
   const rec = await recordGame(game, {
-    ticks: 5000,
+    ticks: 6600,
     keyframeInterval: 100,
     skipInit: true,
     tileTruthEvery: 97,

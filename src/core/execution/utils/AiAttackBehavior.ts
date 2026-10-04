@@ -49,7 +49,11 @@ import {
   EMOJI_ASSIST_TARGET_ME,
   NationEmojiBehavior,
 } from "../nation/NationEmojiBehavior";
-import { findJuiciestTarget, findRunawayLeader } from "../nation/NationUtils";
+import {
+  findDominantPlayer,
+  findJuiciestTarget,
+  findRunawayLeader,
+} from "../nation/NationUtils";
 import type { NationWarshipBehavior } from "../nation/NationWarshipBehavior";
 import { TransportShipExecution } from "../TransportShipExecution";
 import { closestTwoTiles } from "../Util";
@@ -716,12 +720,13 @@ export class AiAttackBehavior {
     return this.sendLandAttack(attacker, () => send, attacker);
   }
 
-  // A bordering runaway leader. Hard & Impossible always consider it: the
+  // A bordering runaway (or dominant) leader. Hard & Impossible always consider it: the
   // too-weak check in calculateAttackTroops decides whether our stack, plus
   // the troops already attacking it, is worth it. Medium only joins attacks
   // already under way.
   private findCrownTarget(borderingEnemies: Player[]): Player | null {
-    const leader = findRunawayLeader(this.game);
+    const leader =
+      findRunawayLeader(this.game) ?? findDominantPlayer(this.game);
     if (
       leader === null ||
       !borderingEnemies.includes(leader) ||

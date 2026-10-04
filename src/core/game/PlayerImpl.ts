@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  AllianceRequestBlocker,
+  BETRAYAL_RELATION_PENALTY,
+} from "../configuration/DiplomacyConstants";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
@@ -856,6 +860,10 @@ export class PlayerImpl implements Player {
       return false;
     }
 
+    if (this.allianceRequestBlocker(other) !== null) {
+      return false;
+    }
+
     const hasIncoming = this.incomingAllianceRequests().some(
       (ar) => ar.requestor() === other,
     );
@@ -875,6 +883,14 @@ export class PlayerImpl implements Player {
     const delta = this.mg.ticks() - recent[0].createdAt();
 
     return delta >= this.mg.config().allianceRequestCooldown();
+  }
+
+  allianceRequestBlocker(other: Player): AllianceRequestBlocker | null {
+    const max = this.mg.config().maxAlliances();
+    if (this.alliances().length >= max) return "slots_self";
+    if (other.alliances().length >= max) return "slots_other";
+    if (this.gold() < this.mg.config().allianceGoldCost(this)) return "gold";
+    return null;
   }
 
   breakAlliance(alliance: MutableAlliance): void {
@@ -900,6 +916,12 @@ export class PlayerImpl implements Player {
   markTraitor(): void {
     this.markedTraitorTick = this.mg.ticks();
     this._betrayalCount++; // Keep count for Nations too
+    // Reputation: every nation trusts a betrayer less, not just the victim.
+    for (const p of this.mg.players()) {
+      if (p !== this && p.type() === PlayerType.Nation) {
+        p.updateRelation(this, -BETRAYAL_RELATION_PENALTY);
+      }
+    }
 
     // Record stats (only for real Humans)
     this.mg.stats().betray(this);

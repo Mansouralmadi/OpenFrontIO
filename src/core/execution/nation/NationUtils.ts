@@ -1,4 +1,8 @@
 import {
+  DOMINANT_LAND_SHARE_PERCENT,
+  DOMINANT_LEAD_FACTOR,
+} from "../../configuration/DiplomacyConstants";
+import {
   Cell,
   Difficulty,
   Game,
@@ -129,14 +133,8 @@ function runawayLeadFactor(difficulty: Difficulty): number | null {
   }
 }
 
-// The FFA player (not a bot) owning the most land, if it is far enough ahead
-// of the runner-up that nations should stop helping it and start pressuring it
-export function findRunawayLeader(game: Game): Player | null {
-  const { difficulty, gameMode } = game.config().gameConfig();
-  if (gameMode !== GameMode.FFA) return null;
-  const factor = runawayLeadFactor(difficulty);
-  if (factor === null) return null;
-
+// The FFA player (not a bot) owning the most land, and the runner-up
+function leaderAndRunnerUp(game: Game): [Player | null, Player | null] {
   let leader: Player | null = null;
   let runnerUp: Player | null = null;
   for (const p of game.players()) {
@@ -151,8 +149,40 @@ export function findRunawayLeader(game: Game): Player | null {
       runnerUp = p;
     }
   }
+  return [leader, runnerUp];
+}
+
+// The FFA player (not a bot) owning the most land, if it is far enough ahead
+// of the runner-up that nations should stop helping it and start pressuring it
+export function findRunawayLeader(game: Game): Player | null {
+  const { difficulty, gameMode } = game.config().gameConfig();
+  if (gameMode !== GameMode.FFA) return null;
+  const factor = runawayLeadFactor(difficulty);
+  if (factor === null) return null;
+
+  const [leader, runnerUp] = leaderAndRunnerUp(game);
   if (leader === null || runnerUp === null) return null;
   return leader.numTilesOwned() >= runnerUp.numTilesOwned() * factor
+    ? leader
+    : null;
+}
+
+// The FFA leader owning a large share of all land while clearly ahead: the
+// target of an anti-snowball coalition (see DiplomacyConstants). Unlike
+// findRunawayLeader this is an absolute bar, the same on every difficulty
+// except Easy, whose nations never notice.
+export function findDominantPlayer(game: Game): Player | null {
+  const { difficulty, gameMode } = game.config().gameConfig();
+  if (gameMode !== GameMode.FFA || difficulty === Difficulty.Easy) return null;
+
+  const [leader, runnerUp] = leaderAndRunnerUp(game);
+  if (leader === null) return null;
+  const tiles = leader.numTilesOwned();
+  if (tiles * 100 < game.numLandTiles() * DOMINANT_LAND_SHARE_PERCENT) {
+    return null;
+  }
+  return runnerUp === null ||
+    tiles >= runnerUp.numTilesOwned() * DOMINANT_LEAD_FACTOR
     ? leader
     : null;
 }

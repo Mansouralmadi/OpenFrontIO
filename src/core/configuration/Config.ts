@@ -23,6 +23,14 @@ import { UserSettings } from "../game/UserSettings";
 import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, toInt, within } from "../Util";
+import {
+  ALLIANCE_COST_FLOOR,
+  ALLIANCE_COST_GOLD_PER_TILE,
+  ALLIANCE_COST_INCOME_TICKS,
+  DEFAULT_ALLIANCE_DURATION_MINUTES,
+  MAX_ALLIANCES,
+  TRAITOR_DURATION_TICKS,
+} from "./DiplomacyConstants";
 
 declare global {
   interface Window {
@@ -314,7 +322,7 @@ export class Config {
     return 0.8;
   }
   traitorDuration(): number {
-    return 30 * 10; // 30 seconds
+    return TRAITOR_DURATION_TICKS;
   }
 
   teamLandShareWinThresholdTenths(): number {
@@ -835,10 +843,23 @@ export class Config {
   }
   allianceDuration(): Tick {
     // Host can set a custom alliance duration in minutes (1-15); 0 disables
-    // alliances (see disableAlliances). Falls back to the 5 minute default.
+    // alliances (see disableAlliances). Falls back to the default.
     const m = this._gameConfig.customAllianceDuration;
     if (typeof m === "number" && m > 0) return m * 60 * 10;
-    return 300 * 10; // 5 minutes.
+    return DEFAULT_ALLIANCE_DURATION_MINUTES * 60 * 10;
+  }
+  maxAlliances(): number {
+    return MAX_ALLIANCES;
+  }
+  // Gold a player pays when an alliance it is part of forms (humans only).
+  allianceGoldCost(player: Player): Gold {
+    if (player.type() !== PlayerType.Human || this.hasInfiniteGoldFor(player)) {
+      return 0n;
+    }
+    const cost =
+      this.goldAdditionRate(player) * ALLIANCE_COST_INCOME_TICKS +
+      BigInt(player.numTilesOwned()) * ALLIANCE_COST_GOLD_PER_TILE;
+    return cost > ALLIANCE_COST_FLOOR ? cost : ALLIANCE_COST_FLOOR;
   }
   temporaryEmbargoDuration(): Tick {
     return 300 * 10; // 5 minutes.
