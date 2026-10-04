@@ -76,6 +76,8 @@ function getStructureRatios(
 
 /** Perceived cost increase percentage per city owned */
 const CITY_PERCEIVED_COST_INCREASE_PER_OWNED = 1;
+/** Scales the city increase above while past administrative capacity (tall economy) */
+const OVEREXTENDED_CITY_COST_FACTOR = 0.5;
 
 /** Cities owned before saving up for nukes inflates structure costs (not on Easy) */
 const CITIES_BEFORE_SAVING = 3;
@@ -731,6 +733,11 @@ export class NationStructureBehavior {
     let increasePerOwned: number;
     if (type === UnitType.City) {
       increasePerOwned = CITY_PERCEIVED_COST_INCREASE_PER_OWNED;
+      // Tall economy: an overextended nation values administrative capacity
+      // more, so cities feel cheaper (it still saves up for nukes).
+      if (this.player.numTilesOwned() > this.player.adminCapacity()) {
+        increasePerOwned *= OVEREXTENDED_CITY_COST_FACTOR;
+      }
     } else {
       const { difficulty } = this.game.config().gameConfig();
       const ratios = getStructureRatios(difficulty);

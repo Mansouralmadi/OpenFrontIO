@@ -59,6 +59,14 @@ export class ControlPanel extends LitElement implements Controller {
   @state()
   private _attackingTroops: number = 0;
 
+  // Tall economy: integration backlog and administrative capacity.
+  @state()
+  private _tiles = 0;
+  @state()
+  private _unintegrated = 0;
+  @state()
+  private _capacity = 0;
+
   @state()
   private _goldGain: bigint | null = null;
   @state()
@@ -142,6 +150,9 @@ export class ControlPanel extends LitElement implements Controller {
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
     this.troopRate = config.troopIncreaseRate(player) * 10;
+    this._tiles = player.numTilesOwned();
+    this._unintegrated = player.unintegratedTiles();
+    this._capacity = player.adminCapacity();
 
     const helpEnabled = new UserSettings().helpMessages();
 
@@ -505,9 +516,33 @@ export class ControlPanel extends LitElement implements Controller {
     `;
   }
 
+  private renderEconomy() {
+    const over = this._tiles > this._capacity;
+    return html`
+      <div
+        class="flex justify-between gap-2 text-xs mb-1 text-gray-300"
+        translate="no"
+      >
+        <span class=${over ? "text-orange-400" : ""}
+          >${translateText("control_panel.admin_capacity", {
+            tiles: renderNumber(this._tiles),
+            capacity: renderNumber(this._capacity),
+          })}</span
+        >
+        ${this._unintegrated > 0
+          ? html`<span
+              >${translateText("control_panel.integrating", {
+                tiles: renderNumber(this._unintegrated),
+              })}</span
+            >`
+          : ""}
+      </div>
+    `;
+  }
+
   private renderDesktop() {
     return html`
-      ${this.renderNotification()}
+      ${this.renderNotification()} ${this.renderEconomy()}
       <!-- Row 1: troop rate | troop bar | gold -->
       <div class="flex gap-1.5 items-center mb-1">
         <!-- Troop rate -->
@@ -601,7 +636,7 @@ export class ControlPanel extends LitElement implements Controller {
 
   private renderMobile() {
     return html`
-      ${this.renderNotification()}
+      ${this.renderNotification()} ${this.renderEconomy()}
       <div class="flex gap-2 items-center">
         <!-- Gold -->
         <div

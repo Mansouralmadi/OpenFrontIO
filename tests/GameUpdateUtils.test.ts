@@ -21,6 +21,7 @@ function makePlayerState(overrides: Partial<PlayerState> = {}): PlayerState {
     killedBy: null,
     deathPosition: null,
     tilesOwned: 0,
+    unintegratedTiles: 0,
     gold: 0,
     tradeGold: 0,
     trainGold: 0,

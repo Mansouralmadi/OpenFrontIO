@@ -65,6 +65,8 @@ export interface PlayerState {
   killedBy: string | null;
   deathPosition: number | null;
   tilesOwned: number;
+  /** Tall economy integration backlog. */
+  unintegratedTiles: number;
   gold: number;
   /** Cumulative ship-trade revenue (live, from PlayerUpdate). */
   tradeGold: number;

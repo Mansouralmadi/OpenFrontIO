@@ -436,6 +436,16 @@ export class PlayerView {
   numTilesOwned(): number {
     return this.state.tilesOwned;
   }
+  unintegratedTiles(): number {
+    return this.state.unintegratedTiles;
+  }
+  adminCapacity(): number {
+    const config = this.game.config();
+    return config.adminCapacity(
+      config.cityLevels(this),
+      this.game.numLandTiles(),
+    );
+  }
   allies(): PlayerView[] {
     return this.state.allies.map(
       (a) => this.game.playerBySmallID(a) as PlayerView,

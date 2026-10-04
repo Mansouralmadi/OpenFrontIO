@@ -94,6 +94,16 @@ export class PlayerExecution implements Execution {
       return;
     }
 
+    const backlog = this.player.unintegratedTiles();
+    if (backlog > 0) {
+      this.player.integrateTiles(
+        this.config.integrationPerTick(
+          backlog,
+          this.config.cityLevels(this.player),
+        ),
+      );
+    }
+
     const troopInc = this.config.troopIncreaseRate(this.player);
     this.player.addTroops(troopInc);
     const goldFromWorkers = this.config.goldAdditionRate(this.player);

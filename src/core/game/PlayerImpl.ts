@@ -173,6 +173,8 @@ export class PlayerImpl implements Player {
     { version: number; owned: number }
   >();
   public _tiles = new TileSet();
+  /** Tall economy integration backlog; GameImpl.conquer/relinquish keep it <= _tiles.size. */
+  public _unintegratedTiles = 0;
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
   private _expiredAlliances: Alliance[] = [];
@@ -391,6 +393,7 @@ export class PlayerImpl implements Player {
       killedBy: deathStats?.killedBy ?? null,
       deathPosition: deathStats?.deathPosition ?? null,
       tilesOwned: this.numTilesOwned(),
+      unintegratedTiles: this._unintegratedTiles,
       gold: this._gold,
       tradeGold: this._tradeGold,
       trainGold: this._trainGold,
@@ -586,6 +589,22 @@ export class PlayerImpl implements Player {
 
   numTilesOwned(): number {
     return this._tiles.size;
+  }
+
+  unintegratedTiles(): number {
+    return this._unintegratedTiles;
+  }
+
+  integrateTiles(count: number): void {
+    this._unintegratedTiles = Math.max(0, this._unintegratedTiles - count);
+  }
+
+  adminCapacity(): number {
+    const config = this.mg.config();
+    return config.adminCapacity(
+      config.cityLevels(this),
+      this.mg.numLandTiles(),
+    );
   }
 
   tiles(): ReadonlyTileSet {
@@ -1987,6 +2006,7 @@ export class PlayerImpl implements Player {
         isTemporary: e.isTemporary,
       })),
       tiles: w.tiles(this._tiles),
+      unintegratedTiles: this._unintegratedTiles,
       borderTiles: w.tiles(this._borderTiles),
       units: this._units.map((u) => w.unit(u)),
       unitsVersion: this._myUnitsVersion,
@@ -2062,6 +2082,7 @@ export class PlayerImpl implements Player {
       });
     }
     this._tiles = new TileSet(s.tiles);
+    this._unintegratedTiles = s.unintegratedTiles;
     this._borderTiles = new TileSet(s.borderTiles);
     this._units = s.units.map((u) => r.unit(u));
     this._myUnitsVersion = s.unitsVersion;
@@ -2110,7 +2131,11 @@ export class PlayerImpl implements Player {
 
 export const PlayerSnapshot = snapshotType({
   name: "Player",
-  version: 1,
+  version: 2,
+  migrations: {
+    // v2: tall economy integration backlog; older games had none.
+    1: (d) => ({ ...d, unintegratedTiles: 0 }),
+  },
   schema: z.object({
     smallID: zInt(),
     info: PlayerInfoSchema,
@@ -2136,6 +2161,7 @@ export const PlayerSnapshot = snapshotType({
       }),
     ),
     tiles: zTiles(),
+    unintegratedTiles: zInt(),
     borderTiles: zTiles(),
     units: z.array(zRef()),
     unitsVersion: zInt(),

@@ -155,6 +155,7 @@ export function playerStateFromUpdate(pu: PlayerUpdate): PlayerState {
     killedBy: pu.killedBy ?? null,
     deathPosition: pu.deathPosition ?? null,
     tilesOwned: pu.tilesOwned!,
+    unintegratedTiles: pu.unintegratedTiles ?? 0,
     gold: Number(pu.gold!),
     tradeGold: Number(pu.tradeGold ?? 0n),
     trainGold: Number(pu.trainGold ?? 0n),
