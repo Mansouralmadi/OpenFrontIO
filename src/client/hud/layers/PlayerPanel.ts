@@ -2,11 +2,16 @@ import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
 import { assetUrl } from "../../../core/AssetUrls";
+import {
+  MAX_ALLIANCES,
+  reputationOf,
+} from "../../../core/configuration/DiplomacyConstants";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
   GameType,
   PlayerActions,
+  PlayerInteraction,
   PlayerProfile,
   PlayerType,
   Relation,
@@ -57,6 +62,28 @@ const targetIcon = assetUrl("images/TargetIconWhite.svg");
 const startTradingIcon = assetUrl("images/TradingIconWhite.svg");
 const traitorIcon = assetUrl("images/TraitorIconLightRed.svg");
 const breakAllianceIcon = assetUrl("images/TraitorIconWhite.svg");
+
+// The alliance request's gold cost, or why it can't be sent.
+export function allianceRequestTooltip(
+  interaction: PlayerInteraction | undefined,
+): string {
+  if (!interaction) return "";
+  const gold = renderNumber(interaction.allianceCost);
+  switch (interaction.allianceRequestBlocker) {
+    case "slots_self":
+      return translateText("player_panel.alliance_blocked_slots_self", {
+        max: MAX_ALLIANCES,
+      });
+    case "slots_other":
+      return translateText("player_panel.alliance_blocked_slots_other", {
+        max: MAX_ALLIANCES,
+      });
+    case "gold":
+      return translateText("player_panel.alliance_blocked_gold", { gold });
+    default:
+      return translateText("player_panel.alliance_cost", { gold });
+  }
+}
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Controller {
@@ -694,6 +721,21 @@ export class PlayerPanel extends LitElement implements Controller {
         </div>
       </div>
 
+      <!-- Reputation (betrayals never wear off) -->
+      <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
+        <div
+          class="flex items-center gap-2 text-[15px] font-medium text-zinc-100 leading-snug"
+        >
+          <span aria-hidden="true">🤝</span>
+          <span>${translateText("player_panel.reputation")}</span>
+        </div>
+        <div class="text-right text-[14px] font-semibold text-zinc-200">
+          ${translateText(
+            `player_panel.reputation_${reputationOf(other.betrayals())}`,
+          )}
+        </div>
+      </div>
+
       <!-- Trading / Embargo -->
       <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
         <div
@@ -825,6 +867,9 @@ export class PlayerPanel extends LitElement implements Controller {
     const canDonateTroops = this.actions?.interaction?.canDonateTroops;
     const canSendAllianceRequest =
       this.actions?.interaction?.canSendAllianceRequest;
+    // Shown disabled when only slots or gold block it, so the player sees why
+    const allianceBlocked =
+      (this.actions?.interaction?.allianceRequestBlocker ?? null) !== null;
     const canSendEmoji =
       other === myPlayer
         ? this.actions?.canSendEmojiAllPlayers
@@ -921,15 +966,23 @@ export class PlayerPanel extends LitElement implements Controller {
                       type: "red",
                     })
                   : ""}
-                ${canSendAllianceRequest
+                ${canSendAllianceRequest ||
+                (allianceBlocked && !canBreakAlliance)
                   ? actionButton({
                       onClick: (e: MouseEvent) =>
                         this.handleAllianceClick(e, my, other),
                       icon: allianceIcon,
                       iconAlt: "Alliance",
-                      title: translateText("player_panel.send_alliance"),
-                      label: translateText("player_panel.send_alliance"),
+                      title: allianceRequestTooltip(this.actions?.interaction),
+                      label: this.actions?.interaction?.allianceCost
+                        ? translateText("player_panel.send_alliance_cost", {
+                            gold: renderNumber(
+                              this.actions.interaction.allianceCost,
+                            ),
+                          })
+                        : translateText("player_panel.send_alliance"),
                       type: "indigo",
+                      disabled: !canSendAllianceRequest,
                     })
                   : ""}
               </div>

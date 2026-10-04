@@ -1,4 +1,5 @@
 import { Config } from "../configuration/Config";
+import type { AllianceRequestBlocker } from "../configuration/DiplomacyConstants";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID } from "../Schemas";
@@ -722,6 +723,8 @@ export interface Player {
   allianceWith(other: Player): MutableAlliance | null;
   allianceInfo(other: Player): AllianceInfo | null;
   canSendAllianceRequest(other: Player): boolean;
+  // Slot/gold limits on requesting an alliance with other (null = none).
+  allianceRequestBlocker(other: Player): AllianceRequestBlocker | null;
   breakAlliance(alliance: Alliance): void;
   removeAllAlliances(): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
@@ -1031,6 +1034,8 @@ export interface PlayerInteraction {
   sharedBorder: boolean;
   canSendEmoji: boolean;
   canSendAllianceRequest: boolean;
+  allianceCost: Gold;
+  allianceRequestBlocker: AllianceRequestBlocker | null;
   canBreakAlliance: boolean;
   canTarget: boolean;
   canDonateGold: boolean;

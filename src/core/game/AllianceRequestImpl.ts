@@ -4,7 +4,7 @@ import type {
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
 import { snapshotType, zInt, zPlayerRef } from "../snapshot/SnapshotType";
-import { AllianceRequest, Player, Tick } from "./Game";
+import { AllianceRequest, MessageType, Player, Tick } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { AllianceRequestUpdate, GameUpdateType } from "./GameUpdates";
 
@@ -35,6 +35,35 @@ export class AllianceRequestImpl implements AllianceRequest {
   }
 
   accept(): void {
+    // Slots may have filled, or gold been spent, since the request was sent.
+    const config = this.game.config();
+    const max = config.maxAlliances();
+    const parties = [this.requestor_, this.recipient_];
+    const costs = parties.map((p) => config.allianceGoldCost(p));
+    let failure: string | null = null;
+    if (parties.some((p) => p.alliances().length >= max)) {
+      failure = "events_display.alliance_failed_slots";
+    } else if (parties.some((p, i) => p.gold() < costs[i])) {
+      failure = "events_display.alliance_failed_gold";
+    }
+    if (failure !== null) {
+      const pairs = [
+        [this.requestor_, this.recipient_],
+        [this.recipient_, this.requestor_],
+      ];
+      for (const [p, other] of pairs) {
+        this.game.displayMessage(
+          failure,
+          MessageType.ALLIANCE_REJECTED,
+          p.id(),
+          undefined,
+          { name: other.displayName() },
+        );
+      }
+      this.reject();
+      return;
+    }
+    parties.forEach((p, i) => p.removeGold(costs[i]));
     this.status_ = "accepted";
     this.game.acceptAllianceRequest(this);
   }

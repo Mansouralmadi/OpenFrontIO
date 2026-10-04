@@ -9,6 +9,7 @@ vi.mock("../src/client/hud/layers/BuildMenu", () => ({
 // Mock Utils to avoid touching DOM (document) during tests
 vi.mock("../src/client/Utils", () => ({
   translateText: (k: string) => k,
+  renderNumber: (n: number | bigint) => String(n),
   getSvgAspectRatio: async () => 1,
 }));
 
@@ -45,6 +46,8 @@ const makeParams = (opts?: Partial<MenuElementParams>): MenuElementParams => {
       interaction: {
         canBreakAlliance: true,
         canSendAllianceRequest: false,
+        allianceCost: 0n,
+        allianceRequestBlocker: null,
         canEmbargo: false,
       },
     } as any,

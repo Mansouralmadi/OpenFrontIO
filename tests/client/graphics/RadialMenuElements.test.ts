@@ -155,6 +155,8 @@ describe("RadialMenuElements", () => {
       canAttack: true,
       interaction: {
         canSendAllianceRequest: true,
+        allianceCost: 0n,
+        allianceRequestBlocker: null,
         canBreakAlliance: false,
         canDonateTroops: true,
         canDonateGold: true,

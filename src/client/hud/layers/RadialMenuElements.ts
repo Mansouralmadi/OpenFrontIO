@@ -21,7 +21,7 @@ import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
 import { EmojiTable } from "./EmojiTable";
 import { PlayerActionHandler } from "./PlayerActionHandler";
-import { PlayerPanel } from "./PlayerPanel";
+import { allianceRequestTooltip, PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
 
 import { EventBus } from "../../../core/EventBus";
@@ -230,6 +230,20 @@ const allyRequestElement: MenuElement = {
     params.closeMenu();
   },
 };
+
+// Request element with its gold cost / block reason in the tooltip
+function allyRequestFor(params: MenuElementParams): MenuElement {
+  return {
+    ...allyRequestElement,
+    tooltipItems: [
+      { text: translateText("player_panel.send_alliance"), className: "title" },
+      {
+        text: allianceRequestTooltip(params.playerActions?.interaction),
+        className: "cost",
+      },
+    ],
+  };
+}
 
 const allyExtendElement: MenuElement = {
   id: "ally_extend",
@@ -804,10 +818,10 @@ export const rootMenuElement: MenuElement = {
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
-        ? [deleteUnitElement, allyRequestElement, buildMenuElement]
+        ? [deleteUnitElement, allyRequestFor(params), buildMenuElement]
         : [
             isAllied && !isDisconnected ? allyBreakElement : boatMenuElement,
-            inExtensionWindow ? allyExtendElement : allyRequestElement,
+            inExtensionWindow ? allyExtendElement : allyRequestFor(params),
             showDonateInsteadOfAttack
               ? donateGoldRadialElement
               : attackMenuElement,

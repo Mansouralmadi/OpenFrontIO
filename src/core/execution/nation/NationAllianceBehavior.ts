@@ -1,8 +1,13 @@
 import { z } from "zod";
 import {
+  BETRAYALS_NATIONS_REFUSE,
+  DOMINANT_ALLY_ABANDON_ODDS,
+} from "../../configuration/DiplomacyConstants";
+import {
   Difficulty,
   Game,
   GameMode,
+  MessageType,
   Player,
   PlayerType,
   Relation,
@@ -27,7 +32,11 @@ import {
   EMOJI_SCARED_OF_THREAT,
   NationEmojiBehavior,
 } from "./NationEmojiBehavior";
-import { findJuiciestTarget, findRunawayLeader } from "./NationUtils";
+import {
+  findDominantPlayer,
+  findJuiciestTarget,
+  findRunawayLeader,
+} from "./NationUtils";
 
 export class NationAllianceBehavior {
   constructor(
@@ -93,6 +102,27 @@ export class NationAllianceBehavior {
     }
   }
 
+  // Coalition: walk out of an alliance with a dominant player. Ending it
+  // early like this is not a betrayal (no traitor debuff, no reputation loss).
+  maybeLeaveDominantAlly() {
+    const dominant = findDominantPlayer(this.game);
+    if (dominant === null || dominant === this.player) return;
+    const alliance = this.player.allianceWith(dominant);
+    if (alliance === null || !this.random.chance(DOMINANT_ALLY_ABANDON_ODDS)) {
+      return;
+    }
+    alliance.expire();
+    this.game.displayMessage(
+      "events_display.coalition_left_alliance",
+      MessageType.ALLIANCE_BROKEN,
+      dominant.id(),
+      undefined,
+      { name: this.player.displayName() },
+      undefined,
+      this.player.id(),
+    );
+  }
+
   maybeSendAllianceRequests(borderingEnemies: Player[]) {
     if (this.game.config().disableAlliances()) return;
 
@@ -120,6 +150,14 @@ export class NationAllianceBehavior {
     otherPlayer: Player,
     isResponse: boolean,
   ): boolean {
+    // Reputation outlasts the traitor debuff: each betrayal halves the odds,
+    // and nations refuse serial betrayers outright
+    const betrayals = otherPlayer.betrayals();
+    if (betrayals >= BETRAYALS_NATIONS_REFUSE) return false;
+    if (betrayals > 0 && !this.random.chance(1 << betrayals)) return false;
+    // Never help a dominant player (see findDominantPlayer)
+    const dominant = findDominantPlayer(this.game);
+    if (dominant === otherPlayer) return false;
     // Easy (dumb) nations sometimes get confused and accept/reject randomly (Just like dumb humans do)
     if (this.isConfused()) {
       return this.random.chance(2);
@@ -139,6 +177,14 @@ export class NationAllianceBehavior {
     // Don't help a runaway leader grow even further (Medium and up)
     if (this.isRunawayLeader(otherPlayer)) {
       return false;
+    }
+    // Anti-snowball coalition: while someone dominates, ally with the others
+    if (
+      dominant !== null &&
+      dominant !== this.player &&
+      this.player.relation(otherPlayer) > Relation.Hostile
+    ) {
+      return true;
     }
     // Before caring about the relation, first check if the otherPlayer is a threat
     // Easy (dumb) nations are blinded by hatred, they don't care about threats, they care about the relation

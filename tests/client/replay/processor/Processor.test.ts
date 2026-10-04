@@ -72,7 +72,8 @@ describe("replay processor", () => {
     const ticks = SPAWN_TURNS + 150;
     const { record, wireStart } = await playAndArchive({
       gameID: "procFFA01",
-      config: config(),
+      // Alliances cost gold; fund the scripted alliance below.
+      config: config({ startingGold: 1_000_000 }),
       players: [a, b],
       // Purchased tribe names replace generated bot names.
       tribes: [{ name: "Lumberjacks" }, { name: "Seafarers" }],
