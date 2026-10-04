@@ -29,7 +29,7 @@ import type {
   PlayerStatic,
   UnitState,
 } from "../render/types";
-import type { GameView } from "../view";
+import type { GameView, PlayerView } from "../view";
 import { playerTypeFromEnum } from "../view/EntityState";
 import type { ReplayFrame } from "./codec/ReplayTypes";
 
@@ -204,6 +204,16 @@ export class ReplayPlayerView {
   }
   numTilesOwned(): number {
     return this.state?.tilesOwned ?? 0;
+  }
+  unintegratedTiles(): number {
+    return this.state?.unintegratedTiles ?? 0;
+  }
+  adminCapacity(): number {
+    const config = this.game.config();
+    return config.adminCapacity(
+      config.cityLevels(this as unknown as PlayerView),
+      this.game.numLandTiles(),
+    );
   }
   gold(): bigint {
     return BigInt(Math.round(this.state?.gold ?? 0));

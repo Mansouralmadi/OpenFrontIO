@@ -242,6 +242,8 @@ export interface PlayerUpdate {
   killedBy?: ClientID | null;
   deathPosition?: number | null;
   tilesOwned?: number;
+  /** Tall economy integration backlog (diffs; changes while integrating). */
+  unintegratedTiles?: number;
   gold?: Gold;
   /** Cumulative ship-trade revenue (changes only on arrivals, so it diffs). */
   tradeGold?: Gold;

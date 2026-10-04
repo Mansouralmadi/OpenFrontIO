@@ -143,10 +143,11 @@ describe("Nation economy at the start", () => {
     expect(built()).toEqual([UnitType.Port]);
   });
 
-  // Real city costs: 500k for the third, 1M for the fourth (inflated 4x with three owned)
+  // Real city costs: 500k for the third, 1M for the fourth. The nation holds far more than its
+  // administrative capacity (tall economy), so each owned city inflates by 0.5x, not 1x: 2.5x with three.
   it.each([
     [2, 500_000n],
-    [3, 4_000_000n],
+    [3, 2_500_000n],
   ])("with %i cities the next one feels like %i", (owned, perceived) => {
     const { behavior, cities } = setupCoast({
       difficulty: Difficulty.Hard,

@@ -265,6 +265,29 @@ const OVERTIME_DEFAULTS = {
   dropPercentPerMinute: 2,
 };
 
+// OpenFront Iron tall economy: rewards consolidating over blobbing. Taken land
+// joins an integration backlog and pays only partly until it integrates; land
+// beyond the city-backed administrative capacity pays at a discount. "Economic
+// tiles" (see Config.economicTiles) replace raw tiles in maxTroops. All tuning
+// lives here.
+const TALL_ECONOMY = {
+  // Share of an unintegrated tile's value that is withheld: it counts as 0.25.
+  unintegratedWeight: 0.75,
+  // Tiles integrated per tick = base + perCityLevel * built city levels
+  // + backlog / backlogDivisor (0.1%/tick). A 20K backlog with no cities is
+  // ~9K a minute later; with 5 city levels it clears in ~50s.
+  integrationBasePerTick: 5,
+  integrationPerCityLevelPerTick: 5,
+  integrationBacklogDivisor: 1000,
+  // Administrative capacity in per-mille of the map's land tiles: 2% base,
+  // +1% per built city level. Scaled to the map so tiny and huge maps behave
+  // alike.
+  capacityBasePermille: 20,
+  capacityPerCityLevelPermille: 10,
+  // Economic tiles beyond capacity count at this weight.
+  overextensionWeight: 0.5,
+};
+
 export class Config {
   private unitInfoCache = new Map<UnitType, UnitInfo>();
   constructor(
@@ -1021,17 +1044,54 @@ export class Config {
     return this.hasInfiniteTroopsForInfo(playerInfo) ? 1_000_000 : 25_000;
   }
 
+  /** Built (not under construction) city levels: the administrative centers. */
+  cityLevels(player: Player | PlayerView): number {
+    let levels = 0;
+    for (const city of player.units(UnitType.City)) {
+      if (!city.isUnderConstruction()) levels += city.level();
+    }
+    return levels;
+  }
+
+  /** Backlog tiles integrated per tick (tall economy, see TALL_ECONOMY). */
+  integrationPerTick(backlog: number, cityLevels: number): number {
+    const t = TALL_ECONOMY;
+    return (
+      t.integrationBasePerTick +
+      t.integrationPerCityLevelPerTick * cityLevels +
+      Math.floor(backlog / t.integrationBacklogDivisor)
+    );
+  }
+
+  /** Tiles a player can administer at full value (tall economy). */
+  adminCapacity(cityLevels: number, landTiles: number): number {
+    const t = TALL_ECONOMY;
+    const permille =
+      t.capacityBasePermille + t.capacityPerCityLevelPermille * cityLevels;
+    return Math.floor((landTiles * permille) / 1000);
+  }
+
+  /**
+   * Tiles as the economy counts them: unintegrated land counts only partly,
+   * and land beyond the administrative capacity at a discount.
+   */
+  economicTiles(player: Player | PlayerView): number {
+    const t = TALL_ECONOMY;
+    const tiles =
+      player.numTilesOwned() -
+      player.unintegratedTiles() * t.unintegratedWeight;
+    const capacity = player.adminCapacity();
+    return tiles <= capacity
+      ? tiles
+      : capacity + (tiles - capacity) * t.overextensionWeight;
+  }
+
   maxTroops(player: Player | PlayerView): number {
     const maxTroops =
       player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
         ? 1_000_000_000
-        : 2 * (pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
-          player
-            .units(UnitType.City)
-            .filter((u) => !u.isUnderConstruction())
-            .map((city) => city.level())
-            .reduce((a, b) => a + b, 0) *
-            this.cityTroopIncrease();
+        : 2 * (pow(this.economicTiles(player), 0.6) * 1000 + 50000) +
+          this.cityLevels(player) * this.cityTroopIncrease();
 
     if (player.type() === PlayerType.Bot) {
       return maxTroops / 3;

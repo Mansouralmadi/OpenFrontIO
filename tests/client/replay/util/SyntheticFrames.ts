@@ -59,6 +59,7 @@ export function fullPlayer(
     killedBy: null,
     deathPosition: null,
     tilesOwned: 10,
+    unintegratedTiles: 0,
     gold: 100n,
     tradeGold: 0n,
     trainGold: 0n,

@@ -638,6 +638,11 @@ export interface Player {
   tiles(): ReadonlyTileSet;
   borderTiles(): ReadonlyTileSet;
   numTilesOwned(): number;
+  /** Tall economy: tiles taken but not yet integrated (see Config.economicTiles). */
+  unintegratedTiles(): number;
+  integrateTiles(count: number): void;
+  /** Tall economy: tiles administered at full value, from built city levels. */
+  adminCapacity(): number;
   conquer(tile: TileRef): void;
   relinquish(tile: TileRef): void;
 

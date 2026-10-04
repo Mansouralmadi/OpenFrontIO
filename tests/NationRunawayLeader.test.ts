@@ -35,6 +35,9 @@ async function setupStripes(
       new PlayerInfo("nation", PlayerType.Nation, null, "nation_id"),
       new PlayerInfo("runnerUp", PlayerType.Human, null, "runner_up_id"),
     ],
+    undefined,
+    undefined,
+    false, // Land is handed out below as settled territory (no integration backlog).
   );
   const players = ["helper_id", "leader_id", "nation_id", "runner_up_id"].map(
     (id) => game.player(id),
@@ -50,6 +53,7 @@ async function setupStripes(
       if (game.map().isLand(tile)) players[stripe].conquer(tile);
     }
   }
+  game.endSpawnPhase();
 
   const emojiBehavior = new NationEmojiBehavior(
     new PseudoRandom(42),
@@ -245,7 +249,8 @@ describe("Attacking a runaway leader - end-to-end via maybeAttack", () => {
       const { game, helper, leader, nation, runnerUp, attackBehavior } =
         await setupStripes(difficulty);
       setTroops(game, nation, runnerUp);
-      leader.setTroops(1_500_000);
+      // Home troops after sending 1.1M: 1.2x the nation's, whatever its max.
+      leader.setTroops(Math.floor(nation.troops() * 1.2) + 1_100_000);
       game.addExecution(new AttackExecution(1_100_000, leader, helper.id()));
       game.executeNextTick();
       // Still stronger at home than the nation, which normally rules it out

@@ -21,6 +21,9 @@ import { diffSnapshots } from "../../util/Snapshot";
 const MAP = "world";
 const TICKS = 1500;
 const CHECK_EVERY = 100;
+// Execution types are also collected between checkpoints: short-lived ones
+// (warship shells) are easily missed at checkpoint ticks alone.
+const SAMPLE_EVERY = 20;
 // Restore at every tick of this window, chaining each restore into the next.
 const WINDOW_START = 700;
 const WINDOW_TICKS = 40;
@@ -52,7 +55,7 @@ async function playReference(start: GameStartInfo): Promise<Reference> {
   while (runner.game.ticks() < TICKS) {
     const tick = runner.game.ticks();
     if (
-      tick % CHECK_EVERY === 0 ||
+      tick % SAMPLE_EVERY === 0 ||
       (tick >= WINDOW_START && tick < WINDOW_START + WINDOW_TICKS)
     ) {
       const bytes = runner.snapshot();

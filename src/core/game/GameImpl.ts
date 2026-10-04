@@ -809,10 +809,18 @@ export class GameImpl implements Game {
       previousOwner._tileChangeVersion++;
       previousOwner._tiles.delete(tile);
       previousOwner._borderTiles.delete(tile);
+      // Lost land is assumed to be the freshly taken frontier first.
+      if (previousOwner._unintegratedTiles > 0) {
+        previousOwner._unintegratedTiles--;
+      }
     }
     this._territoryVersion++;
     this._map.setOwnerID(tile, owner.smallID());
     owner._tiles.add(tile);
+    // Tall economy: land taken after spawning must integrate before it pays.
+    if (this.startTick !== null) {
+      owner._unintegratedTiles++;
+    }
     owner._lastTileChange = this._ticks;
     owner._tileChangeVersion++;
     this.updateBorders(tile);
@@ -833,6 +841,9 @@ export class GameImpl implements Game {
     previousOwner._tileChangeVersion++;
     previousOwner._tiles.delete(tile);
     previousOwner._borderTiles.delete(tile);
+    if (previousOwner._unintegratedTiles > 0) {
+      previousOwner._unintegratedTiles--;
+    }
 
     this._territoryVersion++;
     this._map.setOwnerID(tile, 0);

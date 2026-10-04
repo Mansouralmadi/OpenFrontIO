@@ -19,11 +19,18 @@ import { setup } from "./util/Setup";
 // ocean_and_land: land at x <= 7, open water, and a small island at x >= 14.
 describe("Nation boats and hostile warships", () => {
   async function setupBoats(difficulty: Difficulty) {
-    const game = await setup("ocean_and_land", { difficulty }, [
-      new PlayerInfo("nation", PlayerType.Nation, null, "nation_id"),
-      new PlayerInfo("island", PlayerType.Nation, null, "island_id"),
-      new PlayerInfo("navy", PlayerType.Human, null, "navy_id"),
-    ]);
+    const game = await setup(
+      "ocean_and_land",
+      { difficulty },
+      [
+        new PlayerInfo("nation", PlayerType.Nation, null, "nation_id"),
+        new PlayerInfo("island", PlayerType.Nation, null, "island_id"),
+        new PlayerInfo("navy", PlayerType.Human, null, "navy_id"),
+      ],
+      undefined,
+      undefined,
+      false, // Land is handed out below as settled territory (no integration backlog).
+    );
     const nation = game.player("nation_id");
     const island = game.player("island_id");
     const navy = game.player("navy_id");
@@ -31,6 +38,7 @@ describe("Nation boats and hostile warships", () => {
       if (!game.map().isLand(tile)) return;
       (game.x(tile) <= 7 ? nation : island).conquer(tile);
     });
+    game.endSpawnPhase();
     nation.setTroops(100_000);
     island.setTroops(10_000);
 

@@ -48,6 +48,7 @@ export function diffPlayerUpdate(
     prev.isDisconnected === next.isDisconnected &&
     prev.killedBy === next.killedBy &&
     prev.deathPosition === next.deathPosition &&
+    prev.unintegratedTiles === next.unintegratedTiles &&
     prev.tradeGold === next.tradeGold &&
     prev.trainGold === next.trainGold &&
     prev.piracyGold === next.piracyGold &&
@@ -101,6 +102,10 @@ export function diffPlayerUpdate(
   setIfDifferent("isDisconnected", prev.isDisconnected === next.isDisconnected);
   setIfDifferent("killedBy", prev.killedBy === next.killedBy);
   setIfDifferent("deathPosition", prev.deathPosition === next.deathPosition);
+  setIfDifferent(
+    "unintegratedTiles",
+    prev.unintegratedTiles === next.unintegratedTiles,
+  );
   setIfDifferent("tradeGold", prev.tradeGold === next.tradeGold);
   setIfDifferent("trainGold", prev.trainGold === next.trainGold);
   setIfDifferent("piracyGold", prev.piracyGold === next.piracyGold);
@@ -177,6 +182,9 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.killedBy !== undefined) target.killedBy = pu.killedBy;
   if (pu.deathPosition !== undefined) target.deathPosition = pu.deathPosition;
   if (pu.tilesOwned !== undefined) target.tilesOwned = pu.tilesOwned;
+  if (pu.unintegratedTiles !== undefined) {
+    target.unintegratedTiles = pu.unintegratedTiles;
+  }
   if (pu.gold !== undefined) target.gold = Number(pu.gold);
   if (pu.tradeGold !== undefined) target.tradeGold = Number(pu.tradeGold);
   if (pu.trainGold !== undefined) target.trainGold = Number(pu.trainGold);

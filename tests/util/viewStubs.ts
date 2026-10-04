@@ -126,6 +126,7 @@ export function makePlayerUpdate(
     isAlive: true,
     isDisconnected: false,
     tilesOwned: 0,
+    unintegratedTiles: 0,
     gold: 0n,
     tradeGold: 0n,
     trainGold: 0n,
