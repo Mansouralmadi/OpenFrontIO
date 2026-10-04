@@ -523,6 +523,10 @@ export class UserSettingModal extends BaseModal {
     this.userSettings.togglePerformanceOverlay();
   }
 
+  private toggleDarkMode() {
+    this.userSettings.toggleDarkMode();
+  }
+
   private toggleHelpMessages() {
     this.userSettings.toggleHelpMessages();
 
@@ -1651,6 +1655,15 @@ export class UserSettingModal extends BaseModal {
       <!-- 💾 Save / share the whole configuration. Top level, not inside
            Advanced: a player who never expands the fold should still find it. -->
       <graphics-preset-tools></graphics-preset-tools>
+
+      <!-- 🌙 Dark mode -->
+      <setting-toggle
+        label="${translateText("user_setting.dark_mode_label")}"
+        description="${translateText("user_setting.dark_mode_desc")}"
+        id="dark-mode-toggle"
+        .checked=${this.userSettings.darkMode()}
+        @change=${this.toggleDarkMode}
+      ></setting-toggle>
 
       <!-- 😊 Emojis -->
       <setting-toggle

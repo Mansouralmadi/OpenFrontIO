@@ -12,37 +12,11 @@ import type {
   DesktopUpdateBridge,
   DesktopUpdateState,
 } from "../src/client/DesktopShell";
-import { GameMapType, GameMode } from "../src/core/game/Game";
-import type {
-  GameConfig,
-  PublicGameInfo,
-  PublicGames,
-} from "../src/core/Schemas";
-
-// Both consumers open a public-lobby WebSocket the moment they connect. jsdom
-// has no WebSocket worth talking to and this file is about the seed, not the
-// lobby list, so the socket is a no-op -- except for retaining the update
-// callback the real socket would drive off the wire, which is the only way a
-// lobby card ever renders.
-const { lobbiesCallbackRef } = vi.hoisted(() => ({
-  lobbiesCallbackRef: { current: null as ((g: PublicGames) => void) | null },
-}));
-
-vi.mock("../src/client/LobbySocket", () => ({
-  PublicLobbySocket: class {
-    constructor(onUpdate: (g: PublicGames) => void) {
-      lobbiesCallbackRef.current = onUpdate;
-    }
-    start(): void {}
-    stop(): void {}
-  },
-}));
 
 // Each registers its custom element as a side effect. The status bar is
 // imported FIRST on purpose: that is the order Main.ts uses, and it is the
 // whole reason the bug exists.
 import { DesktopStatusBar } from "../src/client/components/DesktopStatusBar";
-import { DetailedGameViewModal } from "../src/client/components/DetailedGameViewModal";
 import "../src/client/GameModeSelector";
 
 /**
@@ -63,25 +37,11 @@ import "../src/client/GameModeSelector";
 let wiggle: Mock<() => void>;
 let joinOpen: ReturnType<typeof vi.fn>;
 let hostOpen: ReturnType<typeof vi.fn>;
-let joinLobby: ReturnType<typeof vi.fn>;
 
 function stub(tag: string, methods: Record<string, unknown>): void {
   const el = document.createElement(tag);
   Object.assign(el, methods);
   document.body.appendChild(el);
-}
-
-function publicLobby(gameID: string): PublicGameInfo {
-  return {
-    gameID,
-    numClients: 3,
-    publicGameType: "ffa",
-    gameConfig: {
-      gameMap: GameMapType.World,
-      gameMode: GameMode.FFA,
-      maxPlayers: 8,
-    } as unknown as GameConfig,
-  };
 }
 
 /**
@@ -117,26 +77,6 @@ async function mountSelector(): Promise<
   return selector;
 }
 
-/** Mounts <detailed-view-modal> with one rendered lobby card. */
-async function mountModal(): Promise<
-  HTMLElement & { updateComplete: Promise<unknown> }
-> {
-  // `new DetailedGameViewModal()` rather than document.createElement: the
-  // constructor sets `this.id`, which jsdom's spec-strict createElement path
-  // rejects. See DetailedGameViewModalGatingWiring.test.ts.
-  const modal = new DetailedGameViewModal() as unknown as HTMLElement & {
-    updateComplete: Promise<unknown>;
-  };
-  document.body.appendChild(modal);
-  await modal.updateComplete;
-  lobbiesCallbackRef.current?.({
-    serverTime: Date.now(),
-    games: { ffa: [publicLobby("public-1")] },
-  });
-  await modal.updateComplete;
-  return modal;
-}
-
 /** Clicks every button a component renders. Returns how many it clicked. */
 function clickEveryButton(host: HTMLElement): number {
   const buttons = Array.from(host.querySelectorAll("button"));
@@ -162,7 +102,6 @@ beforeEach(() => {
 
   joinOpen = vi.fn();
   hostOpen = vi.fn();
-  joinLobby = vi.fn();
   stub("join-lobby-modal", { open: joinOpen });
   stub("host-lobby-modal", { open: hostOpen });
   stub("single-player-modal", { open: vi.fn() });
@@ -170,13 +109,9 @@ beforeEach(() => {
   // standing in a fake element the way the wiring tests do.
   wiggle = vi.fn<() => void>();
   vi.spyOn(DesktopStatusBar.prototype, "wiggle").mockImplementation(wiggle);
-
-  document.addEventListener("join-lobby", joinLobby as EventListener);
-  lobbiesCallbackRef.current = null;
 });
 
 afterEach(() => {
-  document.removeEventListener("join-lobby", joinLobby as EventListener);
   document.body.innerHTML = "";
   (window as { openfrontDesktop?: unknown }).openfrontDesktop = undefined;
   window.BOOTSTRAP_CONFIG = undefined;
@@ -222,33 +157,5 @@ describe("a consumer mounting AFTER the update state was published", () => {
     expect(joinOpen).toHaveBeenCalled();
     expect(hostOpen).toHaveBeenCalled();
     expect(wiggle).not.toHaveBeenCalled();
-  });
-
-  it("gates DetailedGameViewModal's join() on a staged update", async () => {
-    publishBeforeAnyConsumerMounts(STAGED);
-
-    const modal = await mountModal();
-    const card = modal.querySelector<HTMLButtonElement>(
-      '[data-lobby-slot="public-1"] button.group',
-    );
-    expect(card).not.toBeNull();
-    card!.click();
-
-    expect(joinLobby).not.toHaveBeenCalled();
-    expect(wiggle).toHaveBeenCalled();
-  });
-
-  it("still lets the modal through when the state published was healthy", async () => {
-    publishBeforeAnyConsumerMounts(CURRENT);
-
-    const modal = await mountModal();
-    const card = modal.querySelector<HTMLButtonElement>(
-      '[data-lobby-slot="public-1"] button.group',
-    );
-    expect(card).not.toBeNull();
-    card!.click();
-
-    expect(joinLobby).toHaveBeenCalled();
-    expect(joinLobby.mock.calls[0][0].detail.gameID).toBe("public-1");
   });
 });

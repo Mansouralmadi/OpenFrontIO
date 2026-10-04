@@ -3,14 +3,36 @@ import { createThemeSettings, type RenderSettings } from "./RenderSettings";
 import { hexToRgb } from "./utils/ColorUtils";
 
 /**
+ * Dark-mode terrain. Each band stays a distinct hue/lightness step (shore sand
+ * > highland > plains, mountains the lightest land) so the map still reads,
+ * and everything sits low enough that player territory colors stand out.
+ */
+export const DARK_TERRAIN: RenderSettings["terrain"] = {
+  backgroundColor: "#111317",
+  oceanColor: "#14243a",
+  sandColor: "#6b6548",
+  plainsColor: "#2f4a2a",
+  highlandColor: "#4f4636",
+  mountainColor: "#6c6c70",
+};
+
+/**
  * Apply the user's graphics overrides onto a RenderSettings in place: name
  * scaling, classic/dark structure and name styling, and the colorblind-safe
- * affiliation/tint palette.
+ * affiliation/tint palette. `darkMode` swaps in {@link DARK_TERRAIN} first, so
+ * an explicit terrain-color override still wins over it.
  */
 export function applyGraphicsOverrides(
   settings: RenderSettings,
   overrides: GraphicsOverrides,
+  darkMode = false,
 ): void {
+  if (darkMode) {
+    Object.assign(settings.terrain, DARK_TERRAIN);
+    // Territory fills are blended over the terrain; over a dark map the
+    // default alpha reads muddy, so lean on the player color a bit more.
+    settings.mapOverlay.territoryAlpha = 0.7;
+  }
   if (overrides.name?.nameScaleFactor !== undefined) {
     settings.name.nameScaleFactor = overrides.name.nameScaleFactor;
   }

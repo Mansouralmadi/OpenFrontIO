@@ -41,80 +41,6 @@
         padding-left: env(safe-area-inset-left);
       }
 
-      /* Prevent Playwire bottom rail from affecting flex layout,
-         and keep it below the bottom HUD (z-[200]) so it can't cover the control panel */
-      [id^="pw-oop-bottom_rail"] {
-        position: fixed !important;
-        z-index: 150 !important;
-      }
-
-      /* Playwire flex leaderboard (header ad): Playwire inlines
-         z-index 2147483647 on it — cap it below modals and the mobile drawer,
-         like the bottom rail. The sticky nav shifts below it via
-         --top-ad-height, and page content via --top-ad-pad, both measured by
-         HomepagePromos, so it never covers the menu bar. */
-      #pw-oop-flex,
-      #adBanner.leaderboard_ad {
-        z-index: 150 !important;
-      }
-
-      /* Gutter rails (left/right) get the same inline max z-index, which put
-         them over the featured Twitch player (z-[45000]) and its close
-         button. Cap them like the other units. */
-      [id^="pw-oop-left_rail"],
-      [id^="pw-oop-right_rail"] {
-        z-index: 150 !important;
-      }
-
-      /* The flex unit's inline (expanded) state renders into
-         #pw-oop-flex_container, a direct <body> child. Body is a flex row,
-         which squeezed it to width 0 — the unit could never show its
-         expanded state or sense scrolling, so it latched permanently into
-         the docked leaderboard. Give it its own full-width line at the top
-         of the page (body wraps; the content area follows on the next
-         line), so it expands at the top and docks once scrolled past.
-         HomepagePromos locks its min-height to the expanded ad height once
-         seen, so dock/undock never changes the document height (which would
-         jump the scroll position mid-scroll). */
-      #pw-oop-flex_container {
-        order: -1;
-        flex-basis: 100%;
-        width: 100%;
-      }
-      /* While an inline page (store, settings, ...) is open the document is
-         locked at scroll 0 (see styles.css), so the unit would sit expanded
-         (350px tall) in flow above the modal for as long as the page is open,
-         squeezing the modal to a sliver. Playwire docks the unit through an
-         IntersectionObserver on this container, so park the container just
-         above the viewport instead: the unit then collapses to its fixed
-         leaderboard (measured into --top-ad-height, which pads the content
-         area below), and re-expands in flow when the page closes. No
-         transform here — the docked unit is position: fixed and must keep
-         the viewport as its containing block. */
-      body.page-open #pw-oop-flex_container {
-        position: fixed;
-        bottom: 100%;
-        left: 0;
-        width: 100%;
-      }
-      /* Playwire docks the unit with position: fixed and top: auto, i.e. at
-         its static (in-flow) position — which is now above the viewport. */
-      body.page-open #pw-oop-flex {
-        top: 0;
-      }
-
-      /* Google Funding Choices CCPA link override */
-      .fc-dns-link,
-      .fc-ccpa-root,
-      .fc-consent-root {
-        position: fixed !important;
-        z-index: 999999 !important;
-      }
-      .fc-dns-link {
-        bottom: 15px !important;
-        left: 15px !important;
-      }
-
       /* Ensure full viewport height on iOS; body grows with content so the
          document scrolls (see styles.css) */
       html {
@@ -212,49 +138,6 @@
       async
       defer
     ></script>
-
-    <script data-cfasync="false">
-      window.ramp = window.ramp || {};
-      window.ramp.que = window.ramp.que || [];
-      window.ramp.passiveMode = true;
-    </script>
-
-    <script>
-      window.googletag = window.googletag || { cmd: [] };
-      googletag.cmd.push(function () {
-        googletag.pubads().set("page_url", "http://openfront.io ");
-      });
-    </script>
-
-    <!-- Analytics -->
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=AW-16702609763"
-    ></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-
-      gtag("js", new Date());
-      gtag("config", "AW-16702609763");
-    </script>
-    <!-- Google tag (gtag.js) -->
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=G-WQGQQ8RDN4"
-    ></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
-
-      gtag("config", "G-WQGQQ8RDN4");
-    </script>
   </head>
 
   <body
@@ -263,7 +146,7 @@
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div
         id="background-layer"
-        class="absolute inset-x-0 top-0 -bottom-[4cm] bg-cover opacity-30 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
+        class="absolute inset-x-0 top-0 -bottom-[4cm] bg-cover opacity-30"
         style="
           background-image: var(--background-image-url);
           background-position: center top;
@@ -297,14 +180,10 @@
 
     <!-- MAIN CONTENT AREA -->
     <div
-      class="in-[.in-game]:hidden flex-1 basis-full min-w-0 min-h-dvh in-[.page-open]:min-h-0 in-[.page-open]:overflow-hidden relative pt-[var(--top-ad-pad,0px)] in-[.page-open]:pt-[var(--top-ad-height,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
+      class="in-[.in-game]:hidden flex-1 basis-full min-w-0 min-h-dvh in-[.page-open]:min-h-0 in-[.page-open]:overflow-hidden relative transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
     >
-      <!-- Desktop Top Bar (sticky so it stays visible while the page scrolls,
-           offset below the header ad when one is showing; static while an
-           inline page is open, when the content area is padded below the ad
-           instead and nothing scrolls) -->
       <desktop-nav-bar
-        class="sticky top-[var(--top-ad-height,0px)] z-[60] in-[.page-open]:static"
+        class="sticky top-0 z-[60] in-[.page-open]:static"
       ></desktop-nav-bar>
 
       <div
@@ -312,10 +191,7 @@
         class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-99999"
       ></div>
 
-      <homepage-promos></homepage-promos>
       <banned-modal></banned-modal>
-      <marketing-consent-toast></marketing-consent-toast>
-      <purchase-nudge-modal></purchase-nudge-modal>
 
       <!-- Main container with responsive padding -->
       <main-layout class="contents">
@@ -325,11 +201,6 @@
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></matchmaking-modal>
-        <news-modal
-          id="page-news"
-          inline
-          class="hidden w-full h-full page-content relative z-50"
-        ></news-modal>
         <single-player-modal
           id="page-single-player"
           inline
@@ -345,32 +216,17 @@
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></join-lobby-modal>
-        <store-modal
-          id="page-item-store"
-          inline
-          class="hidden w-full h-full page-content relative z-50"
-        ></store-modal>
         <user-setting
           id="page-settings"
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></user-setting>
-        <leaderboard-modal
-          id="page-leaderboard"
-          inline
-          class="hidden w-full h-full page-content relative z-50"
-        ></leaderboard-modal>
         <troubleshooting-modal
           id="page-troubleshooting"
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></troubleshooting-modal>
 
-        <clan-modal
-          id="page-clan"
-          inline
-          class="hidden w-full h-full page-content relative z-50"
-        ></clan-modal>
         <account-modal
           id="page-account"
           inline
@@ -396,21 +252,11 @@
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></language-modal>
-        <inventory-modal
-          id="page-inventory"
-          inline
-          class="hidden w-full h-full page-content relative z-50"
-        ></inventory-modal>
         <ranked-modal
           id="page-ranked"
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></ranked-modal>
-        <detailed-view-modal
-          id="page-detailed-view"
-          inline
-          class="hidden w-full h-full page-content relative z-50"
-        ></detailed-view-modal>
       </main-layout>
 
       <div class="[.in-game_&]:hidden mt-auto flex flex-col shrink-0">
@@ -420,10 +266,9 @@
       <!-- Global Modals -->
       <steam-link-modal></steam-link-modal>
       <steam-handoff-modal></steam-handoff-modal>
-      <!-- Opened from the nav profile menu (#modal=...) -->
+      <!-- Opened by hash route (#modal=...) -->
       <account-settings-modal></account-settings-modal>
       <change-username-modal></change-username-modal>
-      <subscription-modal></subscription-modal>
     </div>
 
     <!-- Game components -->
@@ -493,7 +338,6 @@
     <player-panel></player-panel>
     <spawn-timer></spawn-timer>
     <immunity-timer></immunity-timer>
-    <in-game-promo></in-game-promo>
     <alert-frame></alert-frame>
     <chat-modal></chat-modal>
     <multi-tab-modal></multi-tab-modal>
@@ -502,16 +346,9 @@
     <player-info-overlay></player-info-overlay>
     <heads-up-message></heads-up-message>
 
-    <!-- Featured stream: direct <body> child (NOT inside the in-[.in-game]:hidden
-         home container) so the Twitch iframe is never display:none'd during a game,
-         which would unmount the player and break ToS-compliant playback. The
-         component is position:fixed and self-manages visibility (pauses in-game). -->
-    <featured-stream></featured-stream>
-
-    <!-- Steam shell status bar. A direct <body> child, like
-         featured-stream above, so it is not inside the home container -- but
-         unlike it, deliberately hidden in-game (see the component's comment).
-         Renders nothing outside the desktop shell. -->
+    <!-- Steam shell status bar. A direct <body> child, so it is not inside
+         the home container; deliberately hidden in-game (see the component's
+         comment). Renders nothing outside the desktop shell. -->
     <desktop-status-bar></desktop-status-bar>
 
     <!-- Scripts -->
@@ -591,19 +428,6 @@
       });
     </script>
 
-    <!-- Analytics -->
-    <script
-      defer
-      src="https://static.cloudflareinsights.com/beacon.min.js"
-      data-cf-beacon='{"token": "03d93e6fefb349c28ee69b408fa25a13"}'
-    ></script>
     <script type="module" src="/src/client/Main.ts"></script>
-    <footer>
-      <script
-        data-cfasync="false"
-        async
-        src="//cdn.intergient.com/1025558/75940/ramp.js"
-      ></script>
-    </footer>
   </body>
 </html>

@@ -278,21 +278,6 @@ export class SinglePlayerModal extends BaseModal {
     this.applyAchievements(event.detail);
   };
 
-  private renderNotLoggedInBanner(): TemplateResult {
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      return html``;
-    }
-    return html`<button
-      class="px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 rounded-lg bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 whitespace-nowrap shrink-0 cursor-pointer hover:bg-yellow-500/30"
-      @click=${() => {
-        this.close();
-        window.showPage?.("page-account");
-      }}
-    >
-      ${translateText("single_modal.sign_in_for_achievements")}
-    </button>`;
-  }
-
   private applyAchievements(userMe: UserMeResponse | false) {
     if (!userMe) {
       this.mapWins = new Map();
@@ -345,7 +330,7 @@ export class SinglePlayerModal extends BaseModal {
               >
             </button>
             ${this.showAchievements ? this.renderMedalOverview() : null}`
-        : this.renderNotLoggedInBanner(),
+        : undefined,
     });
   }
 

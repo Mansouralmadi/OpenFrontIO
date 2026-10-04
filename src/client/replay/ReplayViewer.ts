@@ -15,6 +15,7 @@ import { EventBus } from "../../core/EventBus";
 import { Cell, PlayerType } from "../../core/game/Game";
 import { loadTerrainMap } from "../../core/game/TerrainMapLoader";
 import {
+  DARK_MODE_KEY,
   GRAPHICS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
@@ -85,7 +86,11 @@ const WHEEL_ZOOM = 1.0015;
 /** Render settings with the viewer's graphics overrides applied. */
 function renderSettings(userSettings: UserSettings) {
   const settings = createRenderSettings();
-  applyGraphicsOverrides(settings, userSettings.graphicsOverrides());
+  applyGraphicsOverrides(
+    settings,
+    userSettings.graphicsOverrides(),
+    userSettings.darkMode(),
+  );
   return settings;
 }
 
@@ -445,15 +450,18 @@ export class ReplayViewer extends LitElement {
     // Redraw the players when the graphics settings change (theme, or
     // which cosmetics are shown), like ClientGameRunner's
     // onGraphicsChanged.
-    globalThis.addEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
-      () => {
-        deepAssign(view.getSettings(), renderSettings(userSettings));
-        view.rebuildTerrain();
-        appearance.restyle(adapter);
-      },
-      { signal: this.abort.signal },
-    );
+    const onGraphicsChanged = () => {
+      deepAssign(view.getSettings(), renderSettings(userSettings));
+      view.rebuildTerrain();
+      appearance.restyle(adapter);
+    };
+    for (const key of [GRAPHICS_KEY, DARK_MODE_KEY]) {
+      globalThis.addEventListener(
+        `${USER_SETTINGS_CHANGED_EVENT}:${key}`,
+        onGraphicsChanged,
+        { signal: this.abort.signal },
+      );
+    }
 
     const camera = new ReplayCamera(header.mapWidth, header.mapHeight);
     camera.fit(canvas.clientWidth, canvas.clientHeight);

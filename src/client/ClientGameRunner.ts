@@ -29,6 +29,7 @@ import {
 } from "../core/game/GameUpdates";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import {
+  DARK_MODE_KEY,
   GRAPHICS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
@@ -741,7 +742,11 @@ async function createClientGame(
     // right colors on the first build.
     const resolveRenderSettings = (): RenderSettings => {
       const settings = createRenderSettings();
-      applyGraphicsOverrides(settings, userSettings.graphicsOverrides());
+      applyGraphicsOverrides(
+        settings,
+        userSettings.graphicsOverrides(),
+        userSettings.darkMode(),
+      );
       return settings;
     };
 
@@ -814,11 +819,13 @@ async function createClientGame(
     // No initial regenerate or terrain rebuild needed — the renderer was
     // constructed with the resolved settings above, so the terrain texture
     // already bakes any saved ocean-color override.
-    globalThis.addEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
-      onGraphicsChanged,
-      { signal: graphicsListenerAbort.signal },
-    );
+    for (const key of [GRAPHICS_KEY, DARK_MODE_KEY]) {
+      globalThis.addEventListener(
+        `${USER_SETTINGS_CHANGED_EVENT}:${key}`,
+        onGraphicsChanged,
+        { signal: graphicsListenerAbort.signal },
+      );
+    }
 
     // Loaded on demand so lil-gui and the debug GUI stay out of the main bundle.
     // Two folders: "Effect Editor" and "Render Settings".
