@@ -55,6 +55,7 @@ export enum GameMapType {
   FourIslands = "Four Islands", // map-generator/assets/maps/fourislands/info.json
   France = "France", // map-generator/assets/maps/france/info.json
   GatewayToTheAtlantic = "Gateway to the Atlantic", // map-generator/assets/maps/gatewaytotheatlantic/info.json
+  Generated = "Generated", // map-generator/assets/maps/generated/info.json
   Germany = "Germany", // map-generator/assets/maps/germany/info.json
   GiantWorldMap = "Giant World Map", // map-generator/assets/maps/giantworldmap/info.json
   GreatLakes = "Great Lakes", // map-generator/assets/maps/greatlakes/info.json
@@ -984,6 +985,18 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 27,
     themes: ["europe"],
+  },
+  {
+    id: "Generated",
+    type: GameMapType.Generated,
+    translationKey: "map.generated",
+    categories: ["featured", "fictional"],
+    multiplayerFrequency: 0,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 0,
+    featuredRank: 1,
   },
   {
     id: "Germany",

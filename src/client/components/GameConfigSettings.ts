@@ -197,6 +197,8 @@ export interface GameConfigSettingsData {
     randomMapDivider?: boolean;
     showMedals?: boolean;
     mapWins?: Map<GameMapType, Set<Difficulty>>;
+    /** Rendered above the picker, e.g. generated-map settings. */
+    extra?: TemplateResult;
   };
   difficulty: {
     selected: Difficulty;
@@ -439,16 +441,16 @@ export class GameConfigSettings extends LitElement {
           "text-aquarius",
           "bg-malibu-blue/20",
           "map.map",
-          html`<map-picker
-            .selectedMap=${settings.map.selected}
-            .useRandomMap=${settings.map.useRandom}
-            .randomMapDivider=${settings.map.randomMapDivider ?? false}
-            .showMedals=${settings.map.showMedals ?? false}
-            .mapWins=${settings.map.mapWins ?? new Map()}
-            .onSelectMap=${this.handleSelectMap}
-            .onSelectRandom=${this.handleSelectRandom}
-            .searchQuery=${this.mapSearchQuery}
-          ></map-picker>`,
+          html`${settings.map.extra ?? nothing}<map-picker
+              .selectedMap=${settings.map.selected}
+              .useRandomMap=${settings.map.useRandom}
+              .randomMapDivider=${settings.map.randomMapDivider ?? false}
+              .showMedals=${settings.map.showMedals ?? false}
+              .mapWins=${settings.map.mapWins ?? new Map()}
+              .onSelectMap=${this.handleSelectMap}
+              .onSelectRandom=${this.handleSelectRandom}
+              .searchQuery=${this.mapSearchQuery}
+            ></map-picker>`,
           undefined,
           this.renderMapSearchInput(),
         )}

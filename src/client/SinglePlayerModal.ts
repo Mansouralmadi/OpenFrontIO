@@ -13,6 +13,11 @@ import {
   maps,
   UnitType,
 } from "../core/game/Game";
+import {
+  DEFAULT_RANDOM_MAP,
+  GENERATED_NATION_COUNT,
+  RandomMapParams,
+} from "../core/game/RandomMapGenerator";
 import { UserSettings } from "../core/game/UserSettings";
 import { PlayerCosmetics, TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -21,6 +26,7 @@ import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/GameConfigSettings";
+import { randomSeed } from "./components/GeneratedMapSettings";
 import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
 import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -168,6 +174,10 @@ export class SinglePlayerModal extends BaseModal {
   protected routerName = "single-player";
 
   @state() private selectedMap: GameMapType = DEFAULT_OPTIONS.selectedMap;
+  @state() private generatedMap: RandomMapParams = {
+    ...DEFAULT_RANDOM_MAP,
+    seed: randomSeed(),
+  };
   @state() private selectedDifficulty: Difficulty =
     DEFAULT_OPTIONS.selectedDifficulty;
   @state() private nations: number = 0;
@@ -492,6 +502,13 @@ export class SinglePlayerModal extends BaseModal {
                 useRandom: this.useRandomMap,
                 showMedals: this.showAchievements,
                 mapWins: this.mapWins,
+                extra:
+                  this.selectedMap === GameMapType.Generated
+                    ? html`<generated-map-settings
+                        .params=${this.generatedMap}
+                        @generated-map-changed=${this.handleGeneratedMapChanged}
+                      ></generated-map-settings>`
+                    : undefined,
               },
               difficulty: {
                 selected: this.selectedDifficulty,
@@ -718,6 +735,13 @@ export class SinglePlayerModal extends BaseModal {
     this.useRandomMap = false;
     void this.loadNationCount();
   }
+
+  private handleGeneratedMapChanged = (e: Event) => {
+    const params = (e as CustomEvent<RandomMapParams>).detail;
+    const sizeChanged = params.size !== this.generatedMap.size;
+    this.generatedMap = params;
+    if (sizeChanged) void this.loadNationCount();
+  };
 
   private handleConfigMapSelected = (e: Event) => {
     const customEvent = e as CustomEvent<{ map: GameMapType }>;
@@ -1132,6 +1156,9 @@ export class SinglePlayerModal extends BaseModal {
               ],
               config: {
                 gameMap: this.selectedMap,
+                ...(this.selectedMap === GameMapType.Generated
+                  ? { generatedMap: this.generatedMap }
+                  : {}),
                 gameMapSize: this.compactMap
                   ? GameMapSize.Compact
                   : GameMapSize.Normal,
@@ -1218,14 +1245,17 @@ export class SinglePlayerModal extends BaseModal {
   private async loadNationCount() {
     const currentMap = this.selectedMap;
     try {
-      const mapData = this.mapLoader.getMapData(currentMap);
-      const manifest = await mapData.manifest();
+      const count =
+        currentMap === GameMapType.Generated
+          ? GENERATED_NATION_COUNT[this.generatedMap.size]
+          : (await this.mapLoader.getMapData(currentMap).manifest()).nations
+              .length;
       // Only update if the map hasn't changed
       if (this.selectedMap === currentMap) {
-        this.defaultNationCount = manifest.nations.length;
+        this.defaultNationCount = count;
         this.nations = this.compactMap
-          ? Math.max(0, Math.floor(manifest.nations.length * 0.25))
-          : manifest.nations.length;
+          ? Math.max(0, Math.floor(count * 0.25))
+          : count;
       }
     } catch (error) {
       console.warn("Failed to load nation count", error);

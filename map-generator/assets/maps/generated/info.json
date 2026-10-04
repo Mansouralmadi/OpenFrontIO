@@ -1,0 +1,10 @@
+{
+  "id": "Generated",
+  "name": "Generated",
+  "translation_key": "map.generated",
+  "display_name": "Generate New World",
+  "categories": ["featured", "fictional"],
+  "featured_rank": 1,
+  "multiplayer_frequency": 0,
+  "nations": []
+}

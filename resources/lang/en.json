@@ -910,6 +910,27 @@
   "game_timer": {
     "one_minute_remaining": "One minute remaining!"
   },
+  "generated_map": {
+    "land": "Land mass",
+    "mountains": "Mountains",
+    "reroll": "Reroll",
+    "rivers": "Rivers & lakes",
+    "seed": "Seed",
+    "size": "World size",
+    "sizes": {
+      "large": "Large",
+      "medium": "Medium",
+      "small": "Small"
+    },
+    "style": "Map type",
+    "styles": {
+      "archipelago": "Archipelago",
+      "continents": "Continents",
+      "fractal": "Fractal",
+      "inland_sea": "Inland Sea",
+      "pangaea": "Pangaea"
+    }
+  },
   "graphics_setting": {
     "advanced_desc": "Fine-tune individual graphics options",
     "advanced_label": "Advanced settings",
@@ -1400,6 +1421,7 @@
     "fourislands": "Four Islands",
     "france": "France",
     "gatewaytotheatlantic": "Gateway to the Atlantic",
+    "generated": "Generate New World",
     "germany": "Germany",
     "giantworldmap": "Giant World Map",
     "greatlakes": "Great Lakes",

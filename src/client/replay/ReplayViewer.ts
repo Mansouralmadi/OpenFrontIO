@@ -383,6 +383,8 @@ export class ReplayViewer extends LitElement {
         gsi.config.gameMapSize,
         terrainMapFileLoader,
         false,
+        false,
+        gsi.config.generatedMap,
       ),
       preloadAtlasData(),
     ]);

@@ -23,6 +23,7 @@ import {
   Trios,
   UnitType,
 } from "./game/Game";
+import { RANDOM_MAP_STYLES } from "./game/RandomMapGenerator";
 import { ArchivedPlayerStatsSchema, PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable, LOBBY_LABEL_MAX } from "./Util";
 
@@ -536,6 +537,17 @@ export const GameConfigSchema = z.object({
   gameMode: z.enum(GameMode),
   rankedType: z.enum(RankedType).optional(), // Only set for ranked games.
   gameMapSize: z.enum(GameMapSize),
+  // Params for GameMapType.Generated; the map is rebuilt from these on load.
+  generatedMap: z
+    .object({
+      seed: zb.uint(),
+      landPercent: zb.uint({ min: 10, max: 85 }),
+      style: z.enum(RANDOM_MAP_STYLES),
+      size: z.enum(["small", "medium", "large"]),
+      mountains: zb.uint({ max: 100 }),
+      rivers: zb.uint({ max: 100 }),
+    })
+    .optional(),
   doomsdayClock: DoomsdayClockConfigSchema.optional(),
   overtime: OvertimeConfigSchema.optional(),
   publicGameModifiers: z

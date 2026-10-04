@@ -1,6 +1,11 @@
 import { GameMapSize, GameMapType, TeamGameSpawnAreas } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
-import { GameMapLoader } from "./GameMapLoader";
+import { GameMapLoader, MapData } from "./GameMapLoader";
+import {
+  DEFAULT_RANDOM_MAP,
+  generateRandomMap,
+  RandomMapParams,
+} from "./RandomMapGenerator";
 
 export type TerrainMapData = {
   nations: Nation[];
@@ -78,11 +83,18 @@ export async function loadTerrainMap(
    * game has run on them; restoring a snapshot needs pristine ones.
    */
   fresh: boolean = false,
+  /** Params for GameMapType.Generated (defaults if absent). */
+  generated?: RandomMapParams,
 ): Promise<TerrainMapData> {
-  const cacheKey = `${map}:${mapSize}`;
+  const isGenerated = map === GameMapType.Generated;
+  const cacheKey = isGenerated
+    ? `${map}:${mapSize}:${JSON.stringify(generated ?? DEFAULT_RANDOM_MAP)}`
+    : `${map}:${mapSize}`;
   const cached = loadedMaps.get(cacheKey);
   if (cached !== undefined && !fresh) return cached;
-  const mapFiles = terrainMapFileLoader.getMapData(map);
+  const mapFiles = isGenerated
+    ? generatedMapData(generated ?? DEFAULT_RANDOM_MAP)
+    : terrainMapFileLoader.getMapData(map);
   const loadedManifest = await mapFiles.manifest();
   // Map loaders may hand out the same manifest and byte arrays on every call,
   // and both get mutated below (compact scaling) or by the game (terrain).
@@ -243,6 +255,19 @@ export async function loadLayerImages(
     }),
   );
   return images;
+}
+
+function generatedMapData(params: RandomMapParams): MapData {
+  let result: ReturnType<typeof generateRandomMap> | undefined;
+  const get = () => (result ??= generateRandomMap(params));
+  return {
+    mapBin: async () => get().mapBin,
+    map4xBin: async () => get().map4xBin,
+    map16xBin: async () => get().map16xBin,
+    manifest: async () => get().manifest,
+    webpPath: "",
+    layerPng: () => Promise.reject(new Error("Generated maps have no layers")),
+  };
 }
 
 export async function genTerrainFromBin(

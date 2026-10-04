@@ -25,6 +25,7 @@ const allMapKeys = Object.keys(GameMapType) as GameMapName[];
 
 // Maps excluded from the frequency requirement (not part of regular playlists).
 const FREQUENCY_EXEMPTIONS: Set<GameMapName> = new Set([
+  "Generated", // procedural; needs params a public lobby doesn't have
   "GiantWorldMap",
   "Oceania",
   "BaikalNukeWars",

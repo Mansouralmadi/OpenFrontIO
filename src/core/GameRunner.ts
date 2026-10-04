@@ -50,6 +50,7 @@ export async function createGameRunner(
     mapLoader,
     false, // Worker never renders layers — skip image loading to save memory.
     true, // The game mutates its maps; never share them with another game.
+    gameStart.config.generatedMap,
   );
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 
@@ -117,6 +118,7 @@ export async function createGameRunnerFromSnapshot(
     mapLoader,
     false,
     true, // restore mutates the maps; never onto a shared, used copy
+    header.gameConfig.generatedMap,
   );
   const game = restoreGame(snapshot, {
     config: (gc) => new Config(gc, null, false, gameStart.listed),

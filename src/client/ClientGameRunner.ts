@@ -15,6 +15,7 @@ import {
 import { findClosestBy, replacer } from "../core/Util";
 import {
   BuildableUnit,
+  GameMapType,
   PlayerType,
   Structures,
   UnitType,
@@ -688,14 +689,18 @@ async function createClientGame(
   );
   let gameMap: TerrainMapData;
 
-  if (terrainLoad) {
+  const startConfig = lobbyConfig.gameStartInfo.config;
+  // Lobby preloads don't know generated-map params, so never trust them here.
+  if (terrainLoad && startConfig.gameMap !== GameMapType.Generated) {
     gameMap = await terrainLoad;
   } else {
     gameMap = await loadTerrainMap(
-      lobbyConfig.gameStartInfo.config.gameMap,
-      lobbyConfig.gameStartInfo.config.gameMapSize,
+      startConfig.gameMap,
+      startConfig.gameMapSize,
       mapLoader,
       false, // Layer images loaded off the critical path after game start.
+      false,
+      startConfig.generatedMap,
     );
   }
   // Kick off the font-atlas fetch so it overlaps with worker init; the
