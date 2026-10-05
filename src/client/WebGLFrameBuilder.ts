@@ -36,6 +36,7 @@ import {
   writePlayerEffects,
 } from "./render/gl/utils/PlayerPalette";
 import {
+  UT_ANTIMATTER_BOMB,
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
   UT_MIRV_WARHEAD,
@@ -63,6 +64,7 @@ const SMALL_PLAYER_GLOW_RESCAN_TICKS = 10;
 const UNIT_TYPE_TO_NUKE_TYPE: Readonly<Record<string, NukeExplosionType>> = {
   [UT_ATOM_BOMB]: "atom",
   [UT_HYDROGEN_BOMB]: "hydro",
+  [UT_ANTIMATTER_BOMB]: "hydro",
   [UT_MIRV_WARHEAD]: "mirvWarhead",
 };
 

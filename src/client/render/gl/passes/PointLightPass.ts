@@ -9,6 +9,7 @@ import type { Config } from "src/core/configuration/Config";
 import type { RendererConfig, UnitState } from "../../types";
 import {
   SMOOTHED_NUKE_TYPES,
+  UT_ANTIMATTER_BOMB,
   UT_ATOM_BOMB,
   UT_CITY,
   UT_DEFENSE_POST,
@@ -54,6 +55,7 @@ const LIGHT_CONFIGS: Record<string, LightConfig> = {
   [UT_WARSHIP]: { r: 0.9, g: 0.85, b: 0.7, radius: 10, intensity: 2.8 },
   [UT_ATOM_BOMB]: { r: 1.0, g: 0.9, b: 0.7, radius: 16, intensity: 1.1 },
   [UT_HYDROGEN_BOMB]: { r: 1.0, g: 0.95, b: 0.6, radius: 22, intensity: 1.3 },
+  [UT_ANTIMATTER_BOMB]: { r: 0.75, g: 0.6, b: 1.0, radius: 30, intensity: 1.6 },
   [UT_MIRV]: { r: 1.0, g: 0.9, b: 0.7, radius: 18, intensity: 1.2 },
   [UT_MIRV_WARHEAD]: { r: 1.0, g: 0.6, b: 0.3, radius: 12, intensity: 1.0 },
   // A train is many UT_TRAIN units (engine + tail + carriages) in a line, and

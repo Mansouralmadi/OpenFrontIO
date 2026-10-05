@@ -1,3 +1,5 @@
+import { antimatterBombMagnitude } from "../../../core/configuration/AntimatterBomb";
+
 /**
  * Canonical unit type string constants.
  *
@@ -16,6 +18,7 @@ export const UT_TRADE_SHIP = "Trade Ship" as const;
 export const UT_WARSHIP = "Warship" as const;
 export const UT_ATOM_BOMB = "Atom Bomb" as const;
 export const UT_HYDROGEN_BOMB = "Hydrogen Bomb" as const;
+export const UT_ANTIMATTER_BOMB = "Antimatter Bomb" as const;
 export const UT_MIRV = "MIRV" as const;
 export const UT_SAM_MISSILE = "SAMMissile" as const;
 export const UT_SHELL = "Shell" as const;
@@ -46,6 +49,7 @@ export const STRUCTURE_TYPES: ReadonlySet<string> = new Set([
 export const NUKE_TYPES: ReadonlySet<string> = new Set([
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
+  UT_ANTIMATTER_BOMB,
   UT_MIRV,
 ]);
 
@@ -55,6 +59,7 @@ export const NUKE_TYPES: ReadonlySet<string> = new Set([
 export const SMOOTHED_NUKE_TYPES: ReadonlySet<string> = new Set([
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
+  UT_ANTIMATTER_BOMB,
   UT_MIRV,
   UT_MIRV_WARHEAD,
 ]);
@@ -64,6 +69,7 @@ export const TRAIL_TYPES: ReadonlySet<string> = new Set([
   UT_TRANSPORT,
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
+  UT_ANTIMATTER_BOMB,
   UT_MIRV,
   UT_MIRV_WARHEAD,
 ]);
@@ -76,6 +82,17 @@ export const NUKE_MAGNITUDES: Readonly<
   [UT_HYDROGEN_BOMB]: { inner: 80, outer: 100 },
   [UT_MIRV_WARHEAD]: { inner: 12, outer: 18 },
 };
+
+/** NUKE_MAGNITUDES plus the map-scaled antimatter bomb. */
+export function nukeMagnitudeFor(
+  unitType: string,
+  mapW: number,
+  mapH: number,
+): { inner: number; outer: number } | undefined {
+  return unitType === UT_ANTIMATTER_BOMB
+    ? antimatterBombMagnitude(mapW, mapH)
+    : NUKE_MAGNITUDES[unitType];
+}
 
 // ---------------------------------------------------------------------------
 // Ordered lists (atlas column order — used by GPU passes + header)
@@ -99,4 +116,5 @@ export const ALL_UNIT_TYPES = [
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,
   UT_TRAIN,
+  UT_ANTIMATTER_BOMB,
 ] as const;

@@ -1750,6 +1750,7 @@ export class PlayerImpl implements Player {
         return this.nukeSpawn(targetTile, unitType);
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
+      case UnitType.AntimatterBomb:
         return this.nukeSpawn(targetTile, unitType);
       case UnitType.MIRVWarhead:
         return targetTile;
@@ -1805,7 +1806,7 @@ export class PlayerImpl implements Player {
       nukeType !== UnitType.MIRV &&
       !gameOver
     ) {
-      const magnitude = config.nukeMagnitudes(nukeType);
+      const magnitude = config.nukeMagnitudes(nukeType, mg);
       const wouldHitTeammate = mg.anyUnitNearby(
         tile,
         magnitude.outer,

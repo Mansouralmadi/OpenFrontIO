@@ -38,6 +38,7 @@ import type { RendererConfig, UnitState } from "../../types";
 import {
   SMOOTHED_NUKE_TYPES,
   TrainType,
+  UT_ANTIMATTER_BOMB,
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
   UT_MIRV,
@@ -132,6 +133,7 @@ const TRAIN_CARRIAGE_LOADED_COL = UNIT_ORDER.indexOf("TrainCarriageLoaded");
 const FLICKER_TYPES: ReadonlySet<string> = new Set([
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
+  UT_ANTIMATTER_BOMB,
   UT_MIRV,
   UT_MIRV_WARHEAD,
   UT_SAM_MISSILE,
@@ -143,6 +145,7 @@ const FLICKER_TYPES: ReadonlySet<string> = new Set([
 const MISSILE_TYPES: ReadonlySet<string> = new Set([
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
+  UT_ANTIMATTER_BOMB,
   UT_MIRV,
   UT_SAM_MISSILE,
   UT_SHELL,
@@ -286,6 +289,8 @@ export class UnitPass {
         this.typeToAtlasCol.set(header.unitTypes[i], col);
       }
     }
+    // No dedicated sprite: the antimatter bomb flies as a (glowing) hydrogen bomb.
+    this.typeToAtlasCol.set(UT_ANTIMATTER_BOMB, HYDROGEN_BOMB_COL);
 
     // Compile shaders
     this.program = createProgram(

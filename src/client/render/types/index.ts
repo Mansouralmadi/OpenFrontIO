@@ -39,6 +39,7 @@ export {
   SMOOTHED_NUKE_TYPES,
   STRUCTURE_TYPES,
   TRAIL_TYPES,
+  UT_ANTIMATTER_BOMB,
   UT_ATOM_BOMB,
   UT_CITY,
   UT_DEFENSE_POST,
@@ -55,4 +56,5 @@ export {
   UT_TRAIN,
   UT_TRANSPORT,
   UT_WARSHIP,
+  nukeMagnitudeFor,
 } from "./UnitType";

@@ -44,6 +44,7 @@ const UNIT_LABEL_KEYS = {
   wshp: "unit_type.warship",
   abomb: "unit_type.atom_bomb",
   hbomb: "unit_type.hydrogen_bomb",
+  amb: "unit_type.antimatter_bomb",
   mirv: "unit_type.mirv",
   mirvw: "player_stats_table.unit.mirvw",
   trade: "player_stats_table.unit.trade",

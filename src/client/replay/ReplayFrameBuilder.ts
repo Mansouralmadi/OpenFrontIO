@@ -239,6 +239,7 @@ export class ReplayFrameBuilder {
       fd.relationSize,
       this.deliveredPlans(f),
       f.tick,
+      this.header.mapHeight,
     );
     fd.attackRings = []; // local player only
     fd.structuresDirty = this.structuresChanged(f.units);

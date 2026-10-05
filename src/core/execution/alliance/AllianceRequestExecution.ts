@@ -120,6 +120,7 @@ export class AllianceRequestExecution implements Execution {
       for (const unit of launcher.units([
         UnitType.AtomBomb,
         UnitType.HydrogenBomb,
+        UnitType.AntimatterBomb,
         UnitType.MIRV,
         UnitType.MIRVWarhead,
       ])) {
@@ -140,7 +141,9 @@ export class AllianceRequestExecution implements Execution {
           if (!targetTile || this.mg.owner(targetTile) !== other) continue;
         } else {
           if (!targetTile) continue;
-          const magnitude = this.mg.config().nukeMagnitudes(unit.type());
+          const magnitude = this.mg
+            .config()
+            .nukeMagnitudes(unit.type(), this.mg);
           if (
             !wouldNukeBreakAlliance({
               game: this.mg,
