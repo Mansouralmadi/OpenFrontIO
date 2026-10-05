@@ -64,12 +64,44 @@ describe("tall economy: integration backlog", () => {
     conquerRect(game, a, 10, 0, 30, 50);
     expect(a.unintegratedTiles()).toBe(1500);
 
-    // Losing land takes it off the backlog first; never below zero.
+    // Losing unintegrated land shrinks the backlog; losing core land doesn't.
     conquerRect(game, b, 30, 0, 10, 10);
     expect(a.unintegratedTiles()).toBe(1400);
     expect(b.unintegratedTiles()).toBe(100);
     a.relinquish(game.ref(0, 0));
+    expect(a.unintegratedTiles()).toBe(1400);
+    a.relinquish(game.ref(10, 0));
     expect(a.unintegratedTiles()).toBe(1399);
+    expect(game.isUnintegrated(game.ref(10, 0))).toBe(false);
+  });
+
+  test("each unintegrated tile is flagged; integration clears the oldest first", async () => {
+    const game = await spawnPhaseGame();
+    const a = human(game, "a");
+    const b = human(game, "b");
+    conquerRect(game, a, 0, 0, 10, 10);
+    game.endSpawnPhase();
+    expect(game.isUnintegrated(game.ref(0, 0))).toBe(false); // spawn land
+    conquerRect(game, a, 10, 0, 1, 10); // older
+    conquerRect(game, a, 11, 0, 1, 10); // newer
+    expect(game.isUnintegrated(game.ref(10, 0))).toBe(true);
+
+    // A lost tile goes to its new owner's backlog, then is skipped by ours.
+    b.conquer(game.ref(10, 0));
+    expect(game.isUnintegrated(game.ref(10, 0))).toBe(true);
+    expect(b.unintegratedTiles()).toBe(1);
+
+    a.integrateTiles(9);
+    for (let y = 1; y < 10; y++) {
+      expect(game.isUnintegrated(game.ref(10, y))).toBe(false);
+    }
+    expect(game.isUnintegrated(game.ref(11, 0))).toBe(true);
+    expect(a.unintegratedTiles()).toBe(10);
+
+    a.integrateTiles(100);
+    expect(a.unintegratedTiles()).toBe(0);
+    expect(game.isUnintegrated(game.ref(11, 9))).toBe(false);
+    expect(game.isUnintegrated(game.ref(10, 0))).toBe(true); // still b's
   });
 
   test("the backlog decays each tick, faster with cities", async () => {
@@ -184,11 +216,20 @@ describe("tall economy: snapshots and updates", () => {
     const { restored } = await roundTrip(game, MAP);
     expect(diffGraphs(game, restored)).toEqual([]);
     expect(restored.player(a.id()).unintegratedTiles()).toBe(backlog);
-    game.executeNextTick();
-    restored.executeNextTick();
+    // Same tiles flagged, and integration continues in the same order.
+    for (let i = 0; i < 3; i++) {
+      game.executeNextTick();
+      restored.executeNextTick();
+    }
     expect(restored.player(a.id()).unintegratedTiles()).toBe(
       a.unintegratedTiles(),
     );
+    for (let x = 10; x < 30; x++) {
+      for (let y = 0; y < 10; y++) {
+        const t = game.ref(x, y);
+        expect(restored.isUnintegrated(t)).toBe(game.isUnintegrated(t));
+      }
+    }
   });
 
   test("player updates carry the backlog", async () => {

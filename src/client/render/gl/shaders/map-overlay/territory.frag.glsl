@@ -130,13 +130,23 @@ void main() {
     color.rgb *= uDefenseDarken;
   }
 
+  // Unintegrated land (tall economy): washed out, fainter, with a faint
+  // diagonal hatch, so the not-yet-productive frontier reads at a glance.
+  // It snaps to the full fill as integration spreads from the core.
+  bool unintegrated = (raw & (1u << UNINTEGRATED_BIT)) != 0u;
+  if (unintegrated) {
+    float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    color.rgb = mix(color.rgb, vec3(luma), 0.45);
+    if (((tc.x + tc.y) & 3) == 0) color.rgb *= 0.8;
+  }
+
   // Adjust how saturated the fill is by blending toward its luminance.
   if (uSaturation != 1.0) {
     float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
     color.rgb = mix(vec3(luma), color.rgb, uSaturation);
   }
 
-  color.a = uTerritoryAlpha;
+  color.a = unintegrated ? uTerritoryAlpha * 0.6 : uTerritoryAlpha;
 
   fragColor = color;
 }

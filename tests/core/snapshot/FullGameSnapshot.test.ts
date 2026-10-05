@@ -19,7 +19,7 @@ import { diffSnapshots } from "../../util/Snapshot";
  */
 
 const MAP = "world";
-const TICKS = 1500;
+const TICKS = 2400;
 const CHECK_EVERY = 100;
 // Execution types are also collected between checkpoints: short-lived ones
 // (warship shells) are easily missed at checkpoint ticks alone.

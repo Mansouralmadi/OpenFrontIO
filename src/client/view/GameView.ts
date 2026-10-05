@@ -1003,6 +1003,12 @@ export class GameView implements GameMap {
   setFallout(ref: TileRef, value: boolean): void {
     return this._map.setFallout(ref, value);
   }
+  isUnintegrated(ref: TileRef): boolean {
+    return this._map.isUnintegrated(ref);
+  }
+  setUnintegrated(ref: TileRef, value: boolean): void {
+    return this._map.setUnintegrated(ref, value);
+  }
   isBorder(ref: TileRef): boolean {
     return this._map.isBorder(ref);
   }

@@ -265,6 +265,16 @@ export class GameImpl implements Game {
     return old;
   }
 
+  isUnintegrated(tile: TileRef): boolean {
+    return this._map.isUnintegrated(tile);
+  }
+
+  setUnintegrated(tile: TileRef, value: boolean): void {
+    if (this._map.isUnintegrated(tile) === value) return;
+    this._map.setUnintegrated(tile, value);
+    this.recordTileUpdate(tile);
+  }
+
   setFallout(tile: TileRef, value: boolean) {
     if (value && this.hasOwner(tile)) {
       throw Error(`cannot set fallout, tile ${tile} has owner`);
@@ -809,17 +819,18 @@ export class GameImpl implements Game {
       previousOwner._tileChangeVersion++;
       previousOwner._tiles.delete(tile);
       previousOwner._borderTiles.delete(tile);
-      // Lost land is assumed to be the freshly taken frontier first.
-      if (previousOwner._unintegratedTiles > 0) {
-        previousOwner._unintegratedTiles--;
-      }
+      if (this._map.isUnintegrated(tile)) previousOwner._unintegratedTiles--;
     }
     this._territoryVersion++;
     this._map.setOwnerID(tile, owner.smallID());
     owner._tiles.add(tile);
     // Tall economy: land taken after spawning must integrate before it pays.
-    if (this.startTick !== null) {
+    // Integration goes oldest first, so it spreads from the core outward.
+    const unintegrated = this.startTick !== null;
+    this._map.setUnintegrated(tile, unintegrated);
+    if (unintegrated) {
       owner._unintegratedTiles++;
+      owner._integrationQueue.push(tile);
     }
     owner._lastTileChange = this._ticks;
     owner._tileChangeVersion++;
@@ -841,8 +852,9 @@ export class GameImpl implements Game {
     previousOwner._tileChangeVersion++;
     previousOwner._tiles.delete(tile);
     previousOwner._borderTiles.delete(tile);
-    if (previousOwner._unintegratedTiles > 0) {
+    if (this._map.isUnintegrated(tile)) {
       previousOwner._unintegratedTiles--;
+      this._map.setUnintegrated(tile, false);
     }
 
     this._territoryVersion++;

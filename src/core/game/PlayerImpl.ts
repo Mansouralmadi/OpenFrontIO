@@ -179,6 +179,12 @@ export class PlayerImpl implements Player {
   public _tiles = new TileSet();
   /** Tall economy integration backlog; GameImpl.conquer/relinquish keep it <= _tiles.size. */
   public _unintegratedTiles = 0;
+  /**
+   * Tiles in the order they were taken; integration pops from the front.
+   * May hold stale entries (tiles since lost): those are skipped.
+   */
+  public _integrationQueue: TileRef[] = [];
+  private integrationHead = 0;
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
   private _expiredAlliances: Alliance[] = [];
@@ -600,7 +606,30 @@ export class PlayerImpl implements Player {
   }
 
   integrateTiles(count: number): void {
-    this._unintegratedTiles = Math.max(0, this._unintegratedTiles - count);
+    const q = this._integrationQueue;
+    while (count > 0 && this.integrationHead < q.length) {
+      const tile = q[this.integrationHead++];
+      if (
+        this.mg.ownerID(tile) === this.smallID() &&
+        this.mg.isUnintegrated(tile)
+      ) {
+        this.mg.setUnintegrated(tile, false);
+        this._unintegratedTiles--;
+        count--;
+      }
+    }
+    if (this.integrationHead === q.length) {
+      // Every owned unintegrated tile has a queue entry, so none are left.
+      this._integrationQueue = [];
+      this.integrationHead = 0;
+      this._unintegratedTiles = 0;
+    } else if (
+      this.integrationHead > 4096 &&
+      this.integrationHead * 2 > q.length
+    ) {
+      this._integrationQueue = q.slice(this.integrationHead);
+      this.integrationHead = 0;
+    }
   }
 
   adminCapacity(): number {
@@ -2028,6 +2057,8 @@ export class PlayerImpl implements Player {
       })),
       tiles: w.tiles(this._tiles),
       unintegratedTiles: this._unintegratedTiles,
+      integrationQueue: w.tiles(this._integrationQueue),
+      integrationHead: this.integrationHead,
       borderTiles: w.tiles(this._borderTiles),
       units: this._units.map((u) => w.unit(u)),
       unitsVersion: this._myUnitsVersion,
@@ -2104,6 +2135,8 @@ export class PlayerImpl implements Player {
     }
     this._tiles = new TileSet(s.tiles);
     this._unintegratedTiles = s.unintegratedTiles;
+    this._integrationQueue = Array.from(s.integrationQueue);
+    this.integrationHead = s.integrationHead;
     this._borderTiles = new TileSet(s.borderTiles);
     this._units = s.units.map((u) => r.unit(u));
     this._myUnitsVersion = s.unitsVersion;
@@ -2152,10 +2185,18 @@ export class PlayerImpl implements Player {
 
 export const PlayerSnapshot = snapshotType({
   name: "Player",
-  version: 2,
+  version: 3,
   migrations: {
     // v2: tall economy integration backlog; older games had none.
     1: (d) => ({ ...d, unintegratedTiles: 0 }),
+    // v3: per-tile integration order. v2 counted a backlog without knowing
+    // which tiles; restart it empty (the map snapshot has no bits either).
+    2: (d) => ({
+      ...d,
+      unintegratedTiles: 0,
+      integrationQueue: new Uint32Array(0),
+      integrationHead: 0,
+    }),
   },
   schema: z.object({
     smallID: zInt(),
@@ -2183,6 +2224,8 @@ export const PlayerSnapshot = snapshotType({
     ),
     tiles: zTiles(),
     unintegratedTiles: zInt(),
+    integrationQueue: zTiles(),
+    integrationHead: zInt(),
     borderTiles: zTiles(),
     units: z.array(zRef()),
     unitsVersion: zInt(),
