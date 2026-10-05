@@ -231,16 +231,15 @@ const allyRequestElement: MenuElement = {
   },
 };
 
-// Request element with its gold cost / block reason in the tooltip
+// Request element with the reason it's blocked (alliance slots) in the tooltip
 function allyRequestFor(params: MenuElementParams): MenuElement {
+  const blocked = allianceRequestTooltip(params.playerActions?.interaction);
+  if (!blocked) return allyRequestElement;
   return {
     ...allyRequestElement,
     tooltipItems: [
       { text: translateText("player_panel.send_alliance"), className: "title" },
-      {
-        text: allianceRequestTooltip(params.playerActions?.interaction),
-        className: "cost",
-      },
+      { text: blocked, className: "cost" },
     ],
   };
 }

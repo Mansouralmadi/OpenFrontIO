@@ -1,26 +1,15 @@
 // OpenFront Iron diplomacy tuning, in one place. Alliances are meant to be a
-// big decision: they cost gold, slots are scarce, they last longer, and
-// betrayal follows a player for the rest of the game.
+// big decision: slots are scarce and betrayal follows a player for the rest
+// of the game.
 
-/** Default alliance length (was 5 minutes). Host custom durations still win. */
-export const DEFAULT_ALLIANCE_DURATION_MINUTES = 10;
+/** Default alliance length. Host custom durations still win. */
+export const DEFAULT_ALLIANCE_DURATION_MINUTES = 5;
 
 /** Traitor debuff length after breaking an alliance (was 30 seconds). */
-export const TRAITOR_DURATION_TICKS = 120 * 10;
+export const TRAITOR_DURATION_TICKS = 60 * 10;
 
 /** Max simultaneous alliances per player (was unlimited). */
 export const MAX_ALLIANCES = 3;
-
-// Alliance price, paid by every human party when the alliance forms, whether
-// they asked or accepted. Checked when sending, charged on acceptance: in
-// effect an escrow refunded in full on rejection or expiry, without holding
-// any escrow state. Nations and tribes ally for free: charging them only
-// stalled their economy, and slots + reputation already restrain them.
-// cost = max(FLOOR, INCOME_TICKS of passive gold income + GOLD_PER_TILE * tiles)
-export const ALLIANCE_COST_FLOOR = 50_000n;
-/** One minute of the requester's passive gold income. */
-export const ALLIANCE_COST_INCOME_TICKS = 60n * 10n;
-export const ALLIANCE_COST_GOLD_PER_TILE = 2n;
 
 /** Relation every nation loses toward a player each time they betray. */
 export const BETRAYAL_RELATION_PENALTY = 50;
@@ -46,4 +35,4 @@ export function reputationOf(betrayals: number): Reputation {
 }
 
 /** Why an alliance request can't be sent, for the reasons the UI explains. */
-export type AllianceRequestBlocker = "slots_self" | "slots_other" | "gold";
+export type AllianceRequestBlocker = "slots_self" | "slots_other";

@@ -41,7 +41,7 @@ export class AllianceRequestExecution implements Execution {
 
     if (!this.requestor.canSendAllianceRequest(recipient)) {
       console.warn("cannot send alliance request");
-      // Explain slot/gold blocks, e.g. when accepting from the events panel
+      // Explain slot blocks, e.g. when accepting from the events panel
       const blocker = this.requestor.allianceRequestBlocker(recipient);
       if (blocker !== null && this.requestor.type() === PlayerType.Human) {
         mg.displayMessage(
@@ -49,10 +49,7 @@ export class AllianceRequestExecution implements Execution {
           MessageType.ALLIANCE_REJECTED,
           this.requestor.id(),
           undefined,
-          {
-            max: mg.config().maxAlliances(),
-            gold: Number(mg.config().allianceGoldCost(this.requestor)),
-          },
+          { max: mg.config().maxAlliances() },
         );
       }
       this.active = false;
@@ -65,7 +62,7 @@ export class AllianceRequestExecution implements Execution {
         // then accept it instead of creating a new one.
         this.active = false;
         incoming.accept();
-        // Accepting fails if alliance slots or the requester's gold ran out.
+        // Accepting fails if alliance slots ran out meanwhile.
         if (incoming.status() !== "accepted") return;
 
         // Update player relations

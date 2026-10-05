@@ -889,7 +889,6 @@ export class PlayerImpl implements Player {
     const max = this.mg.config().maxAlliances();
     if (this.alliances().length >= max) return "slots_self";
     if (other.alliances().length >= max) return "slots_other";
-    if (this.gold() < this.mg.config().allianceGoldCost(this)) return "gold";
     return null;
   }
 

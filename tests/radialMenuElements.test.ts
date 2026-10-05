@@ -46,7 +46,6 @@ const makeParams = (opts?: Partial<MenuElementParams>): MenuElementParams => {
       interaction: {
         canBreakAlliance: true,
         canSendAllianceRequest: false,
-        allianceCost: 0n,
         allianceRequestBlocker: null,
         canEmbargo: false,
       },

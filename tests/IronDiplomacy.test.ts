@@ -26,7 +26,6 @@ import { PlayerImpl } from "../src/core/game/PlayerImpl";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { playerInfo, setup } from "./util/Setup";
 import { expectSnapshotRoundTrip } from "./util/Snapshot";
-import { TestConfig } from "./util/TestConfig";
 
 async function humans(n: number): Promise<{ game: Game; ps: Player[] }> {
   const names = Array.from({ length: n }, (_, i) => `p${i + 1}`);
@@ -48,72 +47,18 @@ function ally(game: Game, a: Player, b: Player) {
   expect(a.isAlliedWith(b)).toBe(true);
 }
 
-describe("alliance gold cost", () => {
-  test("both humans pay the cost when the alliance forms", async () => {
-    const { game, ps } = await humans(2);
-    const [a, b] = ps;
-    (game.config() as TestConfig).enableAllianceGoldCost();
-    const cost = game.config().allianceGoldCost(a);
-    expect(cost).toBeGreaterThanOrEqual(50_000n);
-    a.addGold(cost + 7n);
-    b.addGold(cost + 9n);
-
-    game.addExecution(new AllianceRequestExecution(a, b.id()));
-    game.executeNextTick();
-    // Nothing is charged while the request is pending
-    expect(a.gold()).toBe(cost + 7n);
-
-    game.addExecution(new AllianceRequestExecution(b, a.id()));
-    game.executeNextTick();
-    expect(a.isAlliedWith(b)).toBe(true);
-    expect(a.gold()).toBe(7n);
-    expect(b.gold()).toBe(9n);
-  });
-
-  test("a rejected request costs nothing", async () => {
-    const { game, ps } = await humans(2);
-    const [a, b] = ps;
-    (game.config() as TestConfig).enableAllianceGoldCost();
-    a.addGold(1_000_000n);
-    const req = (game as GameImpl).createAllianceRequest(a, b)!;
-    req.reject();
-    expect(a.gold()).toBe(1_000_000n);
-  });
-
-  test("blocks sending a request the player can't afford", async () => {
-    const { game, ps } = await humans(2);
-    const [a, b] = ps;
-    (game.config() as TestConfig).enableAllianceGoldCost();
-    a.addGold(game.config().allianceGoldCost(a) - 1n);
-    expect(a.canSendAllianceRequest(b)).toBe(false);
-    expect(a.allianceRequestBlocker(b)).toBe("gold");
-
-    a.addGold(1n);
-    expect(a.allianceRequestBlocker(b)).toBeNull();
-    expect(a.canSendAllianceRequest(b)).toBe(true);
-  });
-
-  test("fails on acceptance if a human spent the gold meanwhile", async () => {
-    const { game, ps } = await humans(2);
-    const [a, b] = ps;
-    (game.config() as TestConfig).enableAllianceGoldCost();
-    a.addGold(game.config().allianceGoldCost(a));
-    const req = (game as GameImpl).createAllianceRequest(a, b)!;
-    b.addGold(game.config().allianceGoldCost(b));
-    a.removeGold(1n);
-    req.accept();
-    expect(req.status()).toBe("rejected");
-    expect(a.isAlliedWith(b)).toBe(false);
-    expect(b.gold()).toBe(game.config().allianceGoldCost(b));
-  });
-
-  test("nations ally for free", async () => {
-    const game = await setup("plains", {}, [
-      playerInfo("n1", PlayerType.Nation),
-    ]);
-    const n = game.player("n1");
-    expect(game.config().allianceGoldCost(n)).toBe(0n);
-  });
+test("alliances are free", async () => {
+  const { game, ps } = await humans(2);
+  const [a, b] = ps;
+  a.addGold(1_000n);
+  b.addGold(2_000n);
+  game.addExecution(new AllianceRequestExecution(a, b.id()));
+  game.executeNextTick();
+  game.addExecution(new AllianceRequestExecution(b, a.id()));
+  game.executeNextTick();
+  expect(a.isAlliedWith(b)).toBe(true);
+  expect(a.gold()).toBeGreaterThanOrEqual(1_000n);
+  expect(b.gold()).toBeGreaterThanOrEqual(2_000n);
 });
 
 describe("alliance slots", () => {
@@ -153,21 +98,21 @@ describe("alliance slots", () => {
   });
 });
 
-describe("longer commitments", () => {
-  test("default alliance lasts 10 minutes, traitor debuff 2 minutes", async () => {
+describe("durations", () => {
+  test("default alliance lasts 5 minutes, traitor debuff 1 minute", async () => {
     const { game, ps } = await humans(2);
     const [a, b] = ps;
-    expect(game.config().allianceDuration()).toBe(600 * 10);
+    expect(game.config().allianceDuration()).toBe(300 * 10);
     ally(game, a, b);
-    expect(a.allianceWith(b)!.expiresAt()).toBe(game.ticks() + 600 * 10);
+    expect(a.allianceWith(b)!.expiresAt()).toBe(game.ticks() + 300 * 10);
 
     game.addExecution(new BreakAllianceExecution(a, b.id()));
     game.executeNextTick();
     game.executeNextTick();
     expect(a.isTraitor()).toBe(true);
-    expect((a as PlayerImpl).getTraitorRemainingTicks()).toBeGreaterThan(
-      110 * 10,
-    );
+    const remaining = (a as PlayerImpl).getTraitorRemainingTicks();
+    expect(remaining).toBeGreaterThan(50 * 10);
+    expect(remaining).toBeLessThanOrEqual(60 * 10);
   });
 });
 

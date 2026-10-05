@@ -24,9 +24,6 @@ import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, toInt, within } from "../Util";
 import {
-  ALLIANCE_COST_FLOOR,
-  ALLIANCE_COST_GOLD_PER_TILE,
-  ALLIANCE_COST_INCOME_TICKS,
   DEFAULT_ALLIANCE_DURATION_MINUTES,
   MAX_ALLIANCES,
   TRAITOR_DURATION_TICKS,
@@ -850,16 +847,6 @@ export class Config {
   }
   maxAlliances(): number {
     return MAX_ALLIANCES;
-  }
-  // Gold a player pays when an alliance it is part of forms (humans only).
-  allianceGoldCost(player: Player): Gold {
-    if (player.type() !== PlayerType.Human || this.hasInfiniteGoldFor(player)) {
-      return 0n;
-    }
-    const cost =
-      this.goldAdditionRate(player) * ALLIANCE_COST_INCOME_TICKS +
-      BigInt(player.numTilesOwned()) * ALLIANCE_COST_GOLD_PER_TILE;
-    return cost > ALLIANCE_COST_FLOOR ? cost : ALLIANCE_COST_FLOOR;
   }
   temporaryEmbargoDuration(): Tick {
     return 300 * 10; // 5 minutes.

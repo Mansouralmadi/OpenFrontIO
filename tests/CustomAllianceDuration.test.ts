@@ -25,10 +25,10 @@ describe("custom alliance duration", () => {
     );
   });
 
-  it("unset falls back to the 10 minute default (was 5) with alliances on", () => {
+  it("unset falls back to the 5 minute default with alliances on", () => {
     const c = cfg({});
     expect(c.disableAlliances()).toBe(false);
-    expect(c.allianceDuration()).toBe(600 * 10);
+    expect(c.allianceDuration()).toBe(300 * 10);
   });
 
   it("the legacy disableAlliances boolean still disables", () => {

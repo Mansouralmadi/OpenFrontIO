@@ -4,24 +4,13 @@ import {
   Config,
   NukeMagnitude,
 } from "../../src/core/configuration/Config";
-import { Gold, Player, Tick, UnitType } from "../../src/core/game/Game";
+import { Tick, UnitType } from "../../src/core/game/Game";
 
 export class TestConfig extends Config {
   private _proximityBonusPortsNb: number = 0;
   private _defaultNukeSpeed: number = 4;
   private _spawnImmunityDuration: number = 0;
   private _nationSpawnImmunityDuration: number = 0;
-  private _allianceGoldCost: boolean = false;
-
-  // Alliances are free in tests (as spawn immunity is off) unless a test
-  // opts in, so tests that just need an alliance don't have to fund it.
-  enableAllianceGoldCost(): void {
-    this._allianceGoldCost = true;
-  }
-
-  allianceGoldCost(player: Player): Gold {
-    return this._allianceGoldCost ? super.allianceGoldCost(player) : 0n;
-  }
 
   disableNavMesh(): boolean {
     return this.gameConfig().disableNavMesh ?? true;

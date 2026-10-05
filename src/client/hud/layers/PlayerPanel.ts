@@ -63,13 +63,11 @@ const startTradingIcon = assetUrl("images/TradingIconWhite.svg");
 const traitorIcon = assetUrl("images/TraitorIconLightRed.svg");
 const breakAllianceIcon = assetUrl("images/TraitorIconWhite.svg");
 
-// The alliance request's gold cost, or why it can't be sent.
+// Why an alliance request can't be sent ("" when it can).
 export function allianceRequestTooltip(
   interaction: PlayerInteraction | undefined,
 ): string {
-  if (!interaction) return "";
-  const gold = renderNumber(interaction.allianceCost);
-  switch (interaction.allianceRequestBlocker) {
+  switch (interaction?.allianceRequestBlocker) {
     case "slots_self":
       return translateText("player_panel.alliance_blocked_slots_self", {
         max: MAX_ALLIANCES,
@@ -78,10 +76,8 @@ export function allianceRequestTooltip(
       return translateText("player_panel.alliance_blocked_slots_other", {
         max: MAX_ALLIANCES,
       });
-    case "gold":
-      return translateText("player_panel.alliance_blocked_gold", { gold });
     default:
-      return translateText("player_panel.alliance_cost", { gold });
+      return "";
   }
 }
 
@@ -973,14 +969,10 @@ export class PlayerPanel extends LitElement implements Controller {
                         this.handleAllianceClick(e, my, other),
                       icon: allianceIcon,
                       iconAlt: "Alliance",
-                      title: allianceRequestTooltip(this.actions?.interaction),
-                      label: this.actions?.interaction?.allianceCost
-                        ? translateText("player_panel.send_alliance_cost", {
-                            gold: renderNumber(
-                              this.actions.interaction.allianceCost,
-                            ),
-                          })
-                        : translateText("player_panel.send_alliance"),
+                      title:
+                        allianceRequestTooltip(this.actions?.interaction) ||
+                        translateText("player_panel.send_alliance"),
+                      label: translateText("player_panel.send_alliance"),
                       type: "indigo",
                       disabled: !canSendAllianceRequest,
                     })
