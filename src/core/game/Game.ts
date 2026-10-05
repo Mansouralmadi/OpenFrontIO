@@ -646,6 +646,15 @@ export interface Player {
   integrateTile(tile: TileRef): boolean;
   /** Tall economy: tiles administered at full value, from built city levels. */
   adminCapacity(): number;
+  /** Hired troops not yet spent; they disband at mercenaryExpiresAt(). */
+  mercenaries(): number;
+  mercenaryExpiresAt(): Tick;
+  /** Hires still raising the mercenary price (inside the price window). */
+  recentMercenaryHires(): number;
+  canHireMercenaries(): boolean;
+  hireMercenaries(): boolean;
+  /** Disbands the unspent pool once the contract has ended. */
+  expireMercenaries(): void;
   conquer(tile: TileRef): void;
   relinquish(tile: TileRef): void;
 

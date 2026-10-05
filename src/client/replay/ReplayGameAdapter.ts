@@ -208,6 +208,15 @@ export class ReplayPlayerView {
   unintegratedTiles(): number {
     return this.state?.unintegratedTiles ?? 0;
   }
+  mercenaries(): number {
+    return this.state?.mercenaries ?? 0;
+  }
+  mercenaryExpiresAt(): number {
+    return this.state?.mercenaryExpiresAt ?? 0;
+  }
+  recentMercenaryHires(): number {
+    return this.state?.recentMercenaryHires ?? 0;
+  }
   adminCapacity(): number {
     const config = this.game.config();
     return config.adminCapacity(

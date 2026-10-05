@@ -208,6 +208,7 @@ function queuedIntent(game: Game, p: Player, tick: number): Intent | null {
     { type: "emoji", recipient: AllPlayers, emoji: 0 },
     { type: "donate_gold", recipient: other.id(), gold: 1 },
     { type: "donate_troops", recipient: other.id(), troops: 1 },
+    { type: "hire_mercenaries" },
     { type: "embargo", targetID: other.id(), action: "start" },
     { type: "embargo_all", action: "stop" },
     {

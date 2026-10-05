@@ -244,6 +244,10 @@ export interface PlayerUpdate {
   tilesOwned?: number;
   /** Tall economy integration backlog (diffs; changes while integrating). */
   unintegratedTiles?: number;
+  /** Unspent hired troops, their contract end, and hires raising the price. */
+  mercenaries?: number;
+  mercenaryExpiresAt?: number;
+  recentMercenaryHires?: number;
   gold?: Gold;
   /** Cumulative ship-trade revenue (changes only on arrivals, so it diffs). */
   tradeGold?: Gold;

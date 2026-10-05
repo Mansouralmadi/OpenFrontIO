@@ -67,6 +67,9 @@ export interface PlayerState {
   tilesOwned: number;
   /** Tall economy integration backlog. */
   unintegratedTiles: number;
+  mercenaries: number;
+  mercenaryExpiresAt: number;
+  recentMercenaryHires: number;
   gold: number;
   /** Cumulative ship-trade revenue (live, from PlayerUpdate). */
   tradeGold: number;

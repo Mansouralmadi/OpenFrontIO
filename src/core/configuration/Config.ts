@@ -301,6 +301,19 @@ const TALL_ECONOMY = {
   overextensionWeight: 0.5,
 };
 
+// Mercenaries: gold buys a temporary batch of troops above the troop cap.
+// Troops spent (attacks, defending, donations) come out of the mercenary pool
+// first; whatever is left of it disbands when the contract ends.
+const MERCENARIES = {
+  batchShareOfMaxTroops: 0.25,
+  goldPerTroop: 1,
+  // Each hire still inside the price window adds 50% to the next price.
+  priceStepPerRecentHire: 0.5,
+  priceWindowTicks: 5 * 60 * 10,
+  // Every hire (re)starts the contract for the whole pool.
+  contractTicks: 2 * 60 * 10,
+};
+
 export class Config {
   private unitInfoCache = new Map<UnitType, UnitInfo>();
   constructor(
@@ -1100,6 +1113,30 @@ export class Config {
     return TALL_ECONOMY.cityIntegrationIntervalTicks;
   }
 
+  /** Troops one mercenary hire adds. */
+  mercenaryBatch(player: Player | PlayerView): number {
+    return Math.floor(
+      this.maxTroops(player) * MERCENARIES.batchShareOfMaxTroops,
+    );
+  }
+
+  /** Gold the next mercenary hire costs, escalating with recent hires. */
+  mercenaryPrice(player: Player | PlayerView): Gold {
+    const m = MERCENARIES;
+    const markup = 1 + m.priceStepPerRecentHire * player.recentMercenaryHires();
+    return BigInt(
+      Math.floor(this.mercenaryBatch(player) * m.goldPerTroop * markup),
+    );
+  }
+
+  mercenaryPriceWindowTicks(): Tick {
+    return MERCENARIES.priceWindowTicks;
+  }
+
+  mercenaryContractTicks(): Tick {
+    return MERCENARIES.contractTicks;
+  }
+
   /** Tiles a player can administer at full value (tall economy). */
   adminCapacity(cityLevels: number, landTiles: number): number {
     const t = TALL_ECONOMY;
@@ -1155,9 +1192,11 @@ export class Config {
   troopIncreaseRate(player: Player | PlayerView): number {
     const max = this.maxTroops(player);
 
-    let toAdd = 10 + pow(player.troops(), 0.73) / 4;
+    // Mercenaries sit on top of the cap: they neither grow nor shrink troops.
+    const own = player.troops() - player.mercenaries();
+    let toAdd = 10 + pow(own, 0.73) / 4;
 
-    const ratio = 1 - player.troops() / max;
+    const ratio = 1 - own / max;
     toAdd *= ratio;
 
     if (player.type() === PlayerType.Bot) {
@@ -1183,7 +1222,7 @@ export class Config {
       }
     }
 
-    return Math.min(player.troops() + toAdd, max) - player.troops();
+    return Math.min(own + toAdd, max) - own;
   }
 
   goldAdditionRate(player: Player | PlayerView): Gold {

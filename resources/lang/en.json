@@ -397,6 +397,9 @@
     "attack_ratio": "{percent}%\n({troops})",
     "integrating": "Integrating: {tiles} tiles",
     "low_troops_warning": "You are very low on troops - You should always keep some troops for defense.",
+    "mercenaries_active": "Mercenaries: {troops} ({time})",
+    "mercenaries_hire": "Hire {troops} mercenaries ({gold} gold)",
+    "mercenaries_hire_tooltip": "Troops on top of your cap for 2 minutes. Spent first in attacks; the rest leave when the contract ends. Price rises 50% per hire in the last 5 minutes.",
     "teammate_afk_neighbor_info": "You can attack disconnected teammates.",
     "traitor_neighbor_info": "You can betray traitors without becoming a traitor yourself."
   },
@@ -567,6 +570,7 @@
     "focus": "Focus",
     "hydrogen_bomb_detonated": "{name} - hydrogen bomb detonated",
     "ignore": "Ignore",
+    "mercenaries_left": "Mercenary contract ended: {troops} unspent troops left",
     "missile_intercepted": "SAM intercepted {unit}",
     "no_boats_available": "No boats available, max {max}",
     "received_gold_from_captured_ship": "Received {gold} gold from ship captured from {name}",

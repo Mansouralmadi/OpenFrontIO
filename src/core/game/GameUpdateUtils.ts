@@ -49,6 +49,9 @@ export function diffPlayerUpdate(
     prev.killedBy === next.killedBy &&
     prev.deathPosition === next.deathPosition &&
     prev.unintegratedTiles === next.unintegratedTiles &&
+    prev.mercenaries === next.mercenaries &&
+    prev.mercenaryExpiresAt === next.mercenaryExpiresAt &&
+    prev.recentMercenaryHires === next.recentMercenaryHires &&
     prev.tradeGold === next.tradeGold &&
     prev.trainGold === next.trainGold &&
     prev.piracyGold === next.piracyGold &&
@@ -105,6 +108,15 @@ export function diffPlayerUpdate(
   setIfDifferent(
     "unintegratedTiles",
     prev.unintegratedTiles === next.unintegratedTiles,
+  );
+  setIfDifferent("mercenaries", prev.mercenaries === next.mercenaries);
+  setIfDifferent(
+    "mercenaryExpiresAt",
+    prev.mercenaryExpiresAt === next.mercenaryExpiresAt,
+  );
+  setIfDifferent(
+    "recentMercenaryHires",
+    prev.recentMercenaryHires === next.recentMercenaryHires,
   );
   setIfDifferent("tradeGold", prev.tradeGold === next.tradeGold);
   setIfDifferent("trainGold", prev.trainGold === next.trainGold);
@@ -184,6 +196,13 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.tilesOwned !== undefined) target.tilesOwned = pu.tilesOwned;
   if (pu.unintegratedTiles !== undefined) {
     target.unintegratedTiles = pu.unintegratedTiles;
+  }
+  if (pu.mercenaries !== undefined) target.mercenaries = pu.mercenaries;
+  if (pu.mercenaryExpiresAt !== undefined) {
+    target.mercenaryExpiresAt = pu.mercenaryExpiresAt;
+  }
+  if (pu.recentMercenaryHires !== undefined) {
+    target.recentMercenaryHires = pu.recentMercenaryHires;
   }
   if (pu.gold !== undefined) target.gold = Number(pu.gold);
   if (pu.tradeGold !== undefined) target.tradeGold = Number(pu.tradeGold);

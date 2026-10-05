@@ -14,6 +14,7 @@ import {
 } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { AttackRatioEvent } from "../../InputHandler";
+import { SendHireMercenariesIntentEvent } from "../../Transport";
 import { UIState } from "../../UIState";
 import {
   getGamesPlayed,
@@ -66,6 +67,18 @@ export class ControlPanel extends LitElement implements Controller {
   private _unintegrated = 0;
   @state()
   private _capacity = 0;
+
+  // Mercenaries: unspent pool, seconds left on the contract, next hire.
+  @state()
+  private _mercenaries = 0;
+  @state()
+  private _mercenarySecondsLeft = 0;
+  @state()
+  private _mercenaryBatch = 0;
+  @state()
+  private _mercenaryPrice: Gold = 0n;
+  @state()
+  private _canHireMercenaries = false;
 
   @state()
   private _goldGain: bigint | null = null;
@@ -153,6 +166,17 @@ export class ControlPanel extends LitElement implements Controller {
     this._tiles = player.numTilesOwned();
     this._unintegrated = player.unintegratedTiles();
     this._capacity = player.adminCapacity();
+    this._mercenaries = player.mercenaries();
+    this._mercenarySecondsLeft = Math.max(
+      0,
+      Math.ceil((player.mercenaryExpiresAt() - this.game.ticks()) / 10),
+    );
+    this._mercenaryBatch = config.mercenaryBatch(player);
+    this._mercenaryPrice = config.mercenaryPrice(player);
+    this._canHireMercenaries =
+      !this.game.inSpawnPhase() &&
+      this._mercenaryBatch > 0 &&
+      player.gold() >= this._mercenaryPrice;
 
     const helpEnabled = new UserSettings().helpMessages();
 
@@ -533,6 +557,39 @@ export class ControlPanel extends LitElement implements Controller {
           ? html`<span
               >${translateText("control_panel.integrating", {
                 tiles: renderNumber(this._unintegrated),
+              })}</span
+            >`
+          : ""}
+      </div>
+      ${this.renderMercenaries()}
+    `;
+  }
+
+  private renderMercenaries() {
+    const s = this._mercenarySecondsLeft;
+    const time = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    return html`
+      <div
+        class="flex justify-between items-center gap-2 text-xs mb-1 text-gray-300"
+        translate="no"
+      >
+        <button
+          class="px-2 py-0.5 rounded border border-amber-400/50 bg-amber-400/10 text-amber-200 hover:bg-amber-400/20 disabled:opacity-40 disabled:cursor-not-allowed"
+          title=${translateText("control_panel.mercenaries_hire_tooltip")}
+          ?disabled=${!this._canHireMercenaries}
+          @click=${() =>
+            this.eventBus.emit(new SendHireMercenariesIntentEvent())}
+        >
+          ${translateText("control_panel.mercenaries_hire", {
+            troops: renderTroops(this._mercenaryBatch),
+            gold: renderNumber(this._mercenaryPrice),
+          })}
+        </button>
+        ${this._mercenaries > 0
+          ? html`<span class="text-amber-300"
+              >${translateText("control_panel.mercenaries_active", {
+                troops: renderTroops(this._mercenaries),
+                time,
               })}</span
             >`
           : ""}

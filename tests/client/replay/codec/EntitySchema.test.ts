@@ -41,6 +41,9 @@ const basePlayer: PlayerState = {
   deathPosition: null,
   tilesOwned: 1200,
   unintegratedTiles: 0,
+  mercenaries: 0,
+  mercenaryExpiresAt: 0,
+  recentMercenaryHires: 0,
   gold: 50_000,
   tradeGold: 100,
   trainGold: 200,
@@ -73,6 +76,9 @@ const playerAlternatives: { [K in keyof PlayerFields]: PlayerFields[K] } = {
   deathPosition: 123_456,
   tilesOwned: 1205,
   unintegratedTiles: 4,
+  mercenaries: 1200,
+  mercenaryExpiresAt: 3000,
+  recentMercenaryHires: 2,
   gold: 50_000.5, // fractional → f64 escape
   tradeGold: 100 + 40_000, // beyond i16 → f64 escape
   trainGold: 150, // negative delta

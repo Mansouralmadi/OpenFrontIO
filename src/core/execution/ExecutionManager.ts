@@ -12,6 +12,7 @@ import { ConstructionExecution } from "./ConstructionExecution";
 import { DeleteUnitExecution } from "./DeleteUnitExecution";
 import { DonateGoldExecution } from "./DonateGoldExecution";
 import { DonateTroopsExecution } from "./DonateTroopExecution";
+import { HireMercenariesExecution } from "./HireMercenariesExecution";
 import { EmbargoAllExecution } from "./EmbargoAllExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
@@ -102,6 +103,8 @@ export class Executor {
           intent.recipient,
           intent.troops,
         );
+      case "hire_mercenaries":
+        return new HireMercenariesExecution(player);
       case "donate_gold":
         return new DonateGoldExecution(player, intent.recipient, intent.gold);
       case "embargo":

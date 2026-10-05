@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { renderTroops } from "../../client/Utils";
 import {
   AllianceRequestBlocker,
   BETRAYAL_RELATION_PENALTY,
@@ -50,6 +51,7 @@ import {
   GameType,
   Gold,
   MAX_UPGRADE_AMOUNT,
+  MessageType,
   MutableAlliance,
   Player,
   PlayerBuildable,
@@ -185,6 +187,10 @@ export class PlayerImpl implements Player {
    */
   public _integrationQueue: TileRef[] = [];
   private integrationHead = 0;
+
+  private _mercenaries = 0;
+  private _mercenaryExpiresAt = 0;
+  private _mercenaryHireTicks: Tick[] = [];
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
   private _expiredAlliances: Alliance[] = [];
@@ -404,6 +410,9 @@ export class PlayerImpl implements Player {
       deathPosition: deathStats?.deathPosition ?? null,
       tilesOwned: this.numTilesOwned(),
       unintegratedTiles: this._unintegratedTiles,
+      mercenaries: this._mercenaries,
+      mercenaryExpiresAt: this._mercenaryExpiresAt,
+      recentMercenaryHires: this.recentMercenaryHires(),
       gold: this._gold,
       tradeGold: this._tradeGold,
       trainGold: this._trainGold,
@@ -603,6 +612,63 @@ export class PlayerImpl implements Player {
 
   unintegratedTiles(): number {
     return this._unintegratedTiles;
+  }
+
+  mercenaries(): number {
+    return this._mercenaries;
+  }
+
+  mercenaryExpiresAt(): Tick {
+    return this._mercenaryExpiresAt;
+  }
+
+  recentMercenaryHires(): number {
+    const since =
+      this.mg.ticks() - this.mg.config().mercenaryPriceWindowTicks();
+    return this._mercenaryHireTicks.filter((t) => t > since).length;
+  }
+
+  canHireMercenaries(): boolean {
+    const config = this.mg.config();
+    return (
+      this.isAlive() &&
+      !this.mg.inSpawnPhase() &&
+      config.mercenaryBatch(this) > 0 &&
+      this.gold() >= config.mercenaryPrice(this)
+    );
+  }
+
+  hireMercenaries(): boolean {
+    if (!this.canHireMercenaries()) return false;
+    const config = this.mg.config();
+    const batch = config.mercenaryBatch(this);
+    this.removeGold(config.mercenaryPrice(this));
+    this.addTroops(batch);
+    this._mercenaries += batch;
+    const now = this.mg.ticks();
+    this._mercenaryExpiresAt = now + config.mercenaryContractTicks();
+    const since = now - config.mercenaryPriceWindowTicks();
+    this._mercenaryHireTicks = this._mercenaryHireTicks.filter(
+      (t) => t > since,
+    );
+    this._mercenaryHireTicks.push(now);
+    return true;
+  }
+
+  expireMercenaries(): void {
+    if (this._mercenaries <= 0 || this.mg.ticks() < this._mercenaryExpiresAt) {
+      return;
+    }
+    const left = this._mercenaries;
+    this.removeTroops(left);
+    this._mercenaries = 0;
+    this.mg.displayMessage(
+      "events_display.mercenaries_left",
+      MessageType.ATTACK_CANCELLED,
+      this.id(),
+      undefined,
+      { troops: renderTroops(left) },
+    );
   }
 
   integrateTiles(count: number): void {
@@ -1466,6 +1532,8 @@ export class PlayerImpl implements Player {
     }
     const toRemove = minInt(this._troops, toInt(troops));
     this._troops -= toRemove;
+    // Mercenaries are spent first.
+    this._mercenaries = Math.max(0, this._mercenaries - Number(toRemove));
     return Number(toRemove);
   }
 
@@ -2075,6 +2143,9 @@ export class PlayerImpl implements Player {
       })),
       tiles: w.tiles(this._tiles),
       unintegratedTiles: this._unintegratedTiles,
+      mercenaries: this._mercenaries,
+      mercenaryExpiresAt: this._mercenaryExpiresAt,
+      mercenaryHireTicks: [...this._mercenaryHireTicks],
       integrationQueue: w.tiles(this._integrationQueue),
       integrationHead: this.integrationHead,
       borderTiles: w.tiles(this._borderTiles),
@@ -2153,6 +2224,9 @@ export class PlayerImpl implements Player {
     }
     this._tiles = new TileSet(s.tiles);
     this._unintegratedTiles = s.unintegratedTiles;
+    this._mercenaries = s.mercenaries;
+    this._mercenaryExpiresAt = s.mercenaryExpiresAt;
+    this._mercenaryHireTicks = [...s.mercenaryHireTicks];
     this._integrationQueue = Array.from(s.integrationQueue);
     this.integrationHead = s.integrationHead;
     this._borderTiles = new TileSet(s.borderTiles);
@@ -2203,7 +2277,7 @@ export class PlayerImpl implements Player {
 
 export const PlayerSnapshot = snapshotType({
   name: "Player",
-  version: 3,
+  version: 4,
   migrations: {
     // v2: tall economy integration backlog; older games had none.
     1: (d) => ({ ...d, unintegratedTiles: 0 }),
@@ -2214,6 +2288,13 @@ export const PlayerSnapshot = snapshotType({
       unintegratedTiles: 0,
       integrationQueue: new Uint32Array(0),
       integrationHead: 0,
+    }),
+    // v4: mercenaries; older games had none.
+    3: (d) => ({
+      ...d,
+      mercenaries: 0,
+      mercenaryExpiresAt: 0,
+      mercenaryHireTicks: [],
     }),
   },
   schema: z.object({
@@ -2244,6 +2325,9 @@ export const PlayerSnapshot = snapshotType({
     unintegratedTiles: zInt(),
     integrationQueue: zTiles(),
     integrationHead: zInt(),
+    mercenaries: zInt(),
+    mercenaryExpiresAt: zInt(),
+    mercenaryHireTicks: z.array(zInt()),
     borderTiles: zTiles(),
     units: z.array(zRef()),
     unitsVersion: zInt(),

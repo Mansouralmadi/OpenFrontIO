@@ -101,6 +101,7 @@ export class PlayerExecution implements Execution {
       integrateNearCities(this.mg, this.player);
     }
 
+    this.player.expireMercenaries();
     const troopInc = this.config.troopIncreaseRate(this.player);
     this.player.addTroops(troopInc);
     const goldFromWorkers = this.config.goldAdditionRate(this.player);

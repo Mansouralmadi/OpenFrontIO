@@ -137,6 +137,8 @@ export class SendDonateTroopsIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendHireMercenariesIntentEvent implements GameEvent {}
+
 export class SendQuickChatEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView,
@@ -317,6 +319,9 @@ export class Transport {
     );
     this.subscribe(SendDonateTroopsIntentEvent, (e) =>
       this.onSendDonateTroopIntent(e),
+    );
+    this.subscribe(SendHireMercenariesIntentEvent, () =>
+      this.sendIntent({ type: "hire_mercenaries" }),
     );
     this.subscribe(SendQuickChatEvent, (e) => this.onSendQuickChatIntent(e));
     this.subscribe(SendEmbargoIntentEvent, (e) => this.onSendEmbargoIntent(e));

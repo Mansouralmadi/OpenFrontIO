@@ -439,6 +439,15 @@ export class PlayerView {
   unintegratedTiles(): number {
     return this.state.unintegratedTiles;
   }
+  mercenaries(): number {
+    return this.state.mercenaries;
+  }
+  mercenaryExpiresAt(): number {
+    return this.state.mercenaryExpiresAt;
+  }
+  recentMercenaryHires(): number {
+    return this.state.recentMercenaryHires;
+  }
   adminCapacity(): number {
     const config = this.game.config();
     return config.adminCapacity(
