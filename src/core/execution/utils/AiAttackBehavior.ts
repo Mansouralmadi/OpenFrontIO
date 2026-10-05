@@ -7,6 +7,7 @@ import {
   GameMode,
   GameType,
   HumansVsNations,
+  MessageType,
   Player,
   PlayerID,
   PlayerType,
@@ -408,6 +409,9 @@ export class AiAttackBehavior {
 
     // Save up troops until we reach the reserve ratio
     if (!this.hasReserveRatioTroops()) return;
+
+    // Answer an ally's war right away, without saving up to the trigger ratio
+    if (this.joinAllyWar()) return;
 
     // Medium: answer attacks without saving up to the trigger ratio first
     if (difficulty === Difficulty.Medium && this.retaliate()) return;
@@ -832,6 +836,75 @@ export class AiAttackBehavior {
         if (!this.sendAttack(target)) continue;
         this.player.updateRelation(ally, -20);
         this.emojiBehavior.sendEmoji(ally, EMOJI_ASSIST_ACCEPT);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Non-bot players `p` is fighting: whoever it attacks or is attacked by
+  private warOpponents(p: Player): Player[] {
+    const opponents: Player[] = [];
+    const add = (o: Player | TerraNullius) => {
+      if (
+        o.isPlayer() &&
+        o.type() !== PlayerType.Bot &&
+        !opponents.includes(o)
+      ) {
+        opponents.push(o);
+      }
+    };
+    for (const attack of p.incomingAttacks()) add(attack.attacker());
+    for (const attack of p.outgoingAttacks()) add(attack.target());
+    return opponents;
+  }
+
+  // Alliances mean something: join an ally's war (defending it first) when
+  // we can reach the enemy and aren't at war ourselves. The caller already
+  // checked we hold our reserve troops.
+  private joinAllyWar(): boolean {
+    if (this.emojiBehavior === undefined) throw new Error("not initialized");
+    if (this.game.config().disableAlliances()) return false;
+    const allies = this.player.allies();
+    if (allies.length === 0 || this.warOpponents(this.player).length > 0) {
+      return false;
+    }
+
+    for (const ally of allies) {
+      const defending = ally
+        .incomingAttacks()
+        .map((attack) => attack.attacker());
+      const attacking = ally
+        .outgoingAttacks()
+        .map((attack) => attack.target())
+        .filter((target): target is Player => target.isPlayer());
+      for (const enemy of [...defending, ...attacking]) {
+        if (
+          enemy === this.player ||
+          enemy.type() === PlayerType.Bot ||
+          !enemy.isAlive() ||
+          this.player.isFriendly(enemy) ||
+          !this.canReach(enemy) ||
+          !this.shouldAttack(enemy)
+        ) {
+          continue;
+        }
+        const sent = this.bordersByLand(enemy)
+          ? this.sendLandAttack(enemy, undefined, enemy)
+          : this.sendBoatAttack(enemy);
+        if (!sent) continue;
+        this.emojiBehavior.sendEmoji(ally, EMOJI_ASSIST_ACCEPT);
+        if (ally.type() === PlayerType.Human) {
+          this.game.displayMessage(
+            "events_display.ally_joined_war",
+            MessageType.ALLIANCE_ACCEPTED,
+            ally.id(),
+            undefined,
+            { name: this.player.displayName(), enemy: enemy.displayName() },
+            undefined,
+            this.player.id(),
+          );
+        }
         return true;
       }
     }

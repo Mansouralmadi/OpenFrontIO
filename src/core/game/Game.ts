@@ -642,6 +642,8 @@ export interface Player {
   /** Tall economy: tiles taken but not yet integrated (see Config.economicTiles). */
   unintegratedTiles(): number;
   integrateTiles(count: number): void;
+  /** Integrates one owned, unintegrated tile out of queue order (cities). */
+  integrateTile(tile: TileRef): boolean;
   /** Tall economy: tiles administered at full value, from built city levels. */
   adminCapacity(): number;
   conquer(tile: TileRef): void;

@@ -23,6 +23,7 @@ import type {
 } from "../snapshot/SnapshotContext";
 import { zInt, zPlayerRef } from "../snapshot/SnapshotType";
 import { getMode, simpleHash } from "../Util";
+import { integrateNearCities } from "./CityIntegration";
 
 const TICKS_PER_CLUSTER_CALC = 20;
 
@@ -96,12 +97,8 @@ export class PlayerExecution implements Execution {
 
     const backlog = this.player.unintegratedTiles();
     if (backlog > 0) {
-      this.player.integrateTiles(
-        this.config.integrationPerTick(
-          backlog,
-          this.config.cityLevels(this.player),
-        ),
-      );
+      this.player.integrateTiles(this.config.integrationPerTick(backlog));
+      integrateNearCities(this.mg, this.player);
     }
 
     const troopInc = this.config.troopIncreaseRate(this.player);

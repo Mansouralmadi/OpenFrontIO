@@ -278,12 +278,20 @@ const OVERTIME_DEFAULTS = {
 const TALL_ECONOMY = {
   // Share of an unintegrated tile's value that is withheld: it counts as 0.25.
   unintegratedWeight: 0.75,
-  // Tiles integrated per tick = base + perCityLevel * built city levels
-  // + backlog / backlogDivisor (0.1%/tick). A 20K backlog with no cities is
-  // ~9K a minute later; with 5 city levels it clears in ~50s.
+  // Empire-wide integration, oldest land first: base + backlog /
+  // backlogDivisor (0.1%/tick) tiles per tick. A 20K backlog is ~9K a minute
+  // later.
   integrationBasePerTick: 5,
-  integrationPerCityLevelPerTick: 5,
   integrationBacklogDivisor: 1000,
+  // On top of that each built city integrates its owner's land around it,
+  // nearest first: perLevel tiles per tick per city level, within radius +
+  // radiusPerLevel per level beyond the first (capped at maxRadius) tiles.
+  // A city works in a burst every intervalTicks to keep the scan cheap.
+  cityIntegrationPerLevelPerTick: 10,
+  cityIntegrationRadius: 30,
+  cityIntegrationRadiusPerLevel: 6,
+  cityIntegrationMaxRadius: 60,
+  cityIntegrationIntervalTicks: 10,
   // Administrative capacity in per-mille of the map's land tiles: 2% base,
   // +1% per built city level. Scaled to the map so tiny and huge maps behave
   // alike.
@@ -1061,14 +1069,35 @@ export class Config {
     return levels;
   }
 
-  /** Backlog tiles integrated per tick (tall economy, see TALL_ECONOMY). */
-  integrationPerTick(backlog: number, cityLevels: number): number {
+  /** Backlog tiles integrated per tick empire-wide (tall economy, see TALL_ECONOMY). */
+  integrationPerTick(backlog: number): number {
     const t = TALL_ECONOMY;
     return (
       t.integrationBasePerTick +
-      t.integrationPerCityLevelPerTick * cityLevels +
       Math.floor(backlog / t.integrationBacklogDivisor)
     );
+  }
+
+  /** Tiles a city of this level integrates around itself per tick. */
+  cityIntegrationPerTick(level: number): number {
+    return TALL_ECONOMY.cityIntegrationPerLevelPerTick * level;
+  }
+
+  /** How far (in tiles) a city of this level integrates land. */
+  cityIntegrationRadius(level: number): number {
+    const t = TALL_ECONOMY;
+    return Math.min(
+      t.cityIntegrationMaxRadius,
+      t.cityIntegrationRadius + t.cityIntegrationRadiusPerLevel * (level - 1),
+    );
+  }
+
+  cityIntegrationMaxRadius(): number {
+    return TALL_ECONOMY.cityIntegrationMaxRadius;
+  }
+
+  cityIntegrationIntervalTicks(): number {
+    return TALL_ECONOMY.cityIntegrationIntervalTicks;
   }
 
   /** Tiles a player can administer at full value (tall economy). */

@@ -149,11 +149,12 @@ describe("Alliances with a runaway leader", () => {
     return request;
   }
 
+  // Iron: a much bigger player is a protector nations want, runaway or not
   it.each([
     [Difficulty.Easy, true],
-    [Difficulty.Medium, false],
-    [Difficulty.Hard, false],
-    [Difficulty.Impossible, false],
+    [Difficulty.Medium, true],
+    [Difficulty.Hard, true],
+    [Difficulty.Impossible, true],
   ])(
     "%s: accepts a request from the much stronger runaway leader: %s",
     async (difficulty, expected) => {

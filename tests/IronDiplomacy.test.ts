@@ -237,7 +237,7 @@ describe("betrayal reputation", () => {
   });
 });
 
-describe("anti-snowball coalition", () => {
+describe("power politics", () => {
   test("findDominantPlayer: a large land share, clearly ahead", async () => {
     const dominant = await stripes(Difficulty.Medium, DOMINANT);
     expect(findDominantPlayer(dominant.game)).toBe(dominant.leader);
@@ -251,48 +251,59 @@ describe("anti-snowball coalition", () => {
     expect(findDominantPlayer(easy.game)).toBeNull();
   });
 
-  test("nations refuse the dominant player even when it's a threat", async () => {
+  test("small nations want a much bigger (even dominant) protector", async () => {
     const { game, leader, nation, alliance } = await stripes(
       Difficulty.Medium,
       DOMINANT,
     );
-    leader.setTroops(1_000_000);
-    nation.setTroops(100_000);
+    nation.updateRelation(leader, -30); // Distrustful, but not Hostile
+    const request = requestFrom(game, leader, nation);
+    alliance.handleAllianceRequests();
+    expect(request.accept).toHaveBeenCalled();
+  });
+
+  test("small nations still refuse a protector they hate", async () => {
+    const { game, leader, nation, alliance } = await stripes(
+      Difficulty.Impossible,
+      DOMINANT,
+    );
+    nation.updateRelation(leader, -100); // Hostile
     const request = requestFrom(game, leader, nation);
     alliance.handleAllianceRequests();
     expect(request.accept).not.toHaveBeenCalled();
-    expect(request.reject).toHaveBeenCalled();
   });
 
-  test.each([
-    [DOMINANT, true],
-    [CONTESTED, false],
-  ])(
-    "nations ally with a distrusted player only against a dominant one",
-    async (widths, expected) => {
-      const { game, helper, nation, alliance } = await stripes(
-        Difficulty.Medium,
-        widths,
-      );
-      nation.updateRelation(helper, -30); // Distrustful
-      const request = requestFrom(game, helper, nation);
-      alliance.handleAllianceRequests();
-      expect(vi.mocked(request.accept).mock.calls.length > 0).toBe(expected);
-    },
-  );
+  // Leader 80 and nation 70 columns of 200: two great powers of similar size
+  const RIVALS: [number, number, number, number] = [20, 80, 70, 30];
 
-  test("nations walk out of alliances with the dominant player, no betrayal", async () => {
-    const { game, leader, nation, alliance } = await stripes(
-      Difficulty.Medium,
-      DOMINANT,
-    );
-    ally(game, leader, nation);
-    for (let i = 0; i < 500 && nation.isAlliedWith(leader); i++) {
-      alliance.maybeLeaveDominantAlly();
+  test("rival great powers rarely ally, and only when friendly", async () => {
+    const seeds = Array.from({ length: 30 }, (_, i) => i + 1);
+    let neutral = 0;
+    let friendly = 0;
+    for (const seed of seeds) {
+      for (const relation of [0, 100]) {
+        const { game, leader, nation } = await stripes(
+          Difficulty.Impossible,
+          RIVALS,
+        );
+        nation.updateRelation(leader, relation);
+        const behavior = new NationAllianceBehavior(
+          new PseudoRandom(seed),
+          game,
+          nation,
+          new NationEmojiBehavior(new PseudoRandom(seed), game, nation),
+        );
+        const request = requestFrom(game, leader, nation);
+        behavior.handleAllianceRequests();
+        if (vi.mocked(request.accept).mock.calls.length > 0) {
+          if (relation === 0) neutral++;
+          else friendly++;
+        }
+      }
     }
-    expect(nation.isAlliedWith(leader)).toBe(false);
-    expect(nation.isTraitor()).toBe(false);
-    expect(nation.betrayals()).toBe(0);
+    expect(neutral).toBe(0);
+    expect(friendly).toBeGreaterThan(0);
+    expect(friendly).toBeLessThan(seeds.length / 2);
   });
 
   test("Medium nations join attacks on a dominant (not runaway) leader", async () => {
@@ -315,6 +326,101 @@ describe("anti-snowball coalition", () => {
         (e) => e instanceof AttackExecution && e.targetID() === leader.id(),
       );
     expect(onLeader.length).toBeGreaterThan(0);
+  });
+});
+
+describe("allies join wars", () => {
+  // helper | leader | nation | runnerUp: the nation and its ally the helper
+  // both border the leader.
+  async function allied() {
+    const s = await stripes(Difficulty.Hard, CONTESTED);
+    const { game, helper, leader, nation, runnerUp } = s;
+    ally(game, helper, nation);
+    nation.setTroops(Math.floor(game.config().maxTroops(nation) * 0.7));
+    leader.setTroops(Math.floor(nation.troops() * 0.5));
+    runnerUp.setTroops(Math.floor(nation.troops() * 0.3));
+    helper.setTroops(300_000);
+    return s;
+  }
+
+  function attacksOn(spy: { mock: { calls: unknown[][] } }, target: Player) {
+    return spy.mock.calls
+      .map((c) => c[0])
+      .filter(
+        (e) => e instanceof AttackExecution && e.targetID() === target.id(),
+      );
+  }
+
+  test("a nation joins its ally's attack and tells the ally", async () => {
+    const { game, helper, leader, attack } = await allied();
+    game.addExecution(new AttackExecution(100_000, helper, leader.id()));
+    game.executeNextTick();
+
+    const spy = vi.spyOn(game, "addExecution");
+    const display = vi.spyOn(game, "displayMessage");
+    attack.maybeAttack();
+    expect(attacksOn(spy, leader).length).toBeGreaterThan(0);
+    expect(display).toHaveBeenCalledWith(
+      "events_display.ally_joined_war",
+      expect.anything(),
+      helper.id(),
+      undefined,
+      expect.anything(),
+      undefined,
+      expect.anything(),
+    );
+  });
+
+  test("a nation defends an ally under attack", async () => {
+    const { game, helper, leader, attack } = await allied();
+    leader.setTroops(leader.troops() + 100_000);
+    game.addExecution(new AttackExecution(100_000, leader, helper.id()));
+    game.executeNextTick();
+
+    const spy = vi.spyOn(game, "addExecution");
+    const display = vi.spyOn(game, "displayMessage");
+    attack.maybeAttack();
+    expect(attacksOn(spy, leader).length).toBeGreaterThan(0);
+    expect(display).toHaveBeenCalledWith(
+      "events_display.ally_joined_war",
+      expect.anything(),
+      helper.id(),
+      undefined,
+      expect.anything(),
+      undefined,
+      expect.anything(),
+    );
+  });
+
+  test("a nation in its own war stays out", async () => {
+    const { game, helper, leader, nation, runnerUp, attack } = await allied();
+    game.addExecution(new AttackExecution(100_000, helper, leader.id()));
+    runnerUp.setTroops(runnerUp.troops() + 50_000);
+    game.addExecution(new AttackExecution(50_000, runnerUp, nation.id()));
+    game.executeNextTick();
+
+    const display = vi.spyOn(game, "displayMessage");
+    attack.maybeAttack();
+    expect(display).not.toHaveBeenCalledWith(
+      "events_display.ally_joined_war",
+      expect.anything(),
+      expect.anything(),
+      undefined,
+      expect.anything(),
+      undefined,
+      expect.anything(),
+    );
+  });
+
+  test("a nation low on troops stays out", async () => {
+    const { game, helper, leader, nation, attack } = await allied();
+    nation.setTroops(Math.floor(game.config().maxTroops(nation) * 0.1));
+    game.addExecution(new AttackExecution(100_000, helper, leader.id()));
+    game.executeNextTick();
+
+    const spy = vi.spyOn(game, "addExecution");
+    attack.maybeAttack();
+    expect(attacksOn(spy, leader)).toHaveLength(0);
   });
 });
 

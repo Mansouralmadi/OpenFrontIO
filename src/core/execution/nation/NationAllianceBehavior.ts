@@ -1,13 +1,15 @@
 import { z } from "zod";
 import {
   BETRAYALS_NATIONS_REFUSE,
-  DOMINANT_ALLY_ABANDON_ODDS,
+  GREAT_POWER_LAND_SHARE_PERCENT,
+  PROTECTOR_LAND_FACTOR,
+  RIVAL_ALLIANCE_ODDS,
+  RIVAL_LAND_FACTOR,
 } from "../../configuration/DiplomacyConstants";
 import {
   Difficulty,
   Game,
   GameMode,
-  MessageType,
   Player,
   PlayerType,
   Relation,
@@ -32,11 +34,7 @@ import {
   EMOJI_SCARED_OF_THREAT,
   NationEmojiBehavior,
 } from "./NationEmojiBehavior";
-import {
-  findDominantPlayer,
-  findJuiciestTarget,
-  findRunawayLeader,
-} from "./NationUtils";
+import { findJuiciestTarget } from "./NationUtils";
 
 export class NationAllianceBehavior {
   constructor(
@@ -102,27 +100,6 @@ export class NationAllianceBehavior {
     }
   }
 
-  // Coalition: walk out of an alliance with a dominant player. Ending it
-  // early like this is not a betrayal (no traitor debuff, no reputation loss).
-  maybeLeaveDominantAlly() {
-    const dominant = findDominantPlayer(this.game);
-    if (dominant === null || dominant === this.player) return;
-    const alliance = this.player.allianceWith(dominant);
-    if (alliance === null || !this.random.chance(DOMINANT_ALLY_ABANDON_ODDS)) {
-      return;
-    }
-    alliance.expire();
-    this.game.displayMessage(
-      "events_display.coalition_left_alliance",
-      MessageType.ALLIANCE_BROKEN,
-      dominant.id(),
-      undefined,
-      { name: this.player.displayName() },
-      undefined,
-      this.player.id(),
-    );
-  }
-
   maybeSendAllianceRequests(borderingEnemies: Player[]) {
     if (this.game.config().disableAlliances()) return;
 
@@ -155,9 +132,6 @@ export class NationAllianceBehavior {
     const betrayals = otherPlayer.betrayals();
     if (betrayals >= BETRAYALS_NATIONS_REFUSE) return false;
     if (betrayals > 0 && !this.random.chance(1 << betrayals)) return false;
-    // Never help a dominant player (see findDominantPlayer)
-    const dominant = findDominantPlayer(this.game);
-    if (dominant === otherPlayer) return false;
     // Easy (dumb) nations sometimes get confused and accept/reject randomly (Just like dumb humans do)
     if (this.isConfused()) {
       return this.random.chance(2);
@@ -174,17 +148,23 @@ export class NationAllianceBehavior {
     if (this.hasTooManyAlliances(otherPlayer)) {
       return false;
     }
-    // Don't help a runaway leader grow even further (Medium and up)
-    if (this.isRunawayLeader(otherPlayer)) {
-      return false;
-    }
-    // Anti-snowball coalition: while someone dominates, ally with the others
+    // Power politics: small nations want a much bigger protector unless they
+    // hate it, and great powers of similar size rarely trust each other
+    const power = this.powerBalance(otherPlayer);
     if (
-      dominant !== null &&
-      dominant !== this.player &&
+      power === "protector" &&
       this.player.relation(otherPlayer) > Relation.Hostile
     ) {
+      if (this.random.chance(3)) {
+        this.emojiBehavior.sendEmoji(otherPlayer, EMOJI_HANDSHAKE);
+      }
       return true;
+    }
+    if (power === "rival") {
+      return (
+        this.player.relation(otherPlayer) === Relation.Friendly &&
+        this.random.chance(RIVAL_ALLIANCE_ODDS)
+      );
     }
     // Before caring about the relation, first check if the otherPlayer is a threat
     // Easy (dumb) nations are blinded by hatred, they don't care about threats, they care about the relation
@@ -249,8 +229,22 @@ export class NationAllianceBehavior {
     }
   }
 
-  private isRunawayLeader(otherPlayer: Player): boolean {
-    return findRunawayLeader(this.game) === otherPlayer;
+  // "protector": the other player owns PROTECTOR_LAND_FACTOR times our land.
+  // "rival": both are great powers of similar size.
+  private powerBalance(otherPlayer: Player): "protector" | "rival" | null {
+    const ours = this.player.numTilesOwned();
+    const theirs = otherPlayer.numTilesOwned();
+    if (theirs >= ours * PROTECTOR_LAND_FACTOR) return "protector";
+    const greatPower =
+      this.game.numLandTiles() * GREAT_POWER_LAND_SHARE_PERCENT;
+    if (
+      ours * 100 >= greatPower &&
+      theirs * 100 >= greatPower &&
+      Math.max(ours, theirs) <= Math.min(ours, theirs) * RIVAL_LAND_FACTOR
+    ) {
+      return "rival";
+    }
+    return null;
   }
 
   private isConfused(): boolean {

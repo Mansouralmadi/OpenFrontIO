@@ -632,6 +632,24 @@ export class PlayerImpl implements Player {
     }
   }
 
+  integrateTile(tile: TileRef): boolean {
+    if (
+      this.mg.ownerID(tile) !== this.smallID() ||
+      !this.mg.isUnintegrated(tile)
+    ) {
+      return false;
+    }
+    this.mg.setUnintegrated(tile, false);
+    this._unintegratedTiles--;
+    // Its queue entry stays and integrateTiles skips it later; once nothing
+    // is left the queue holds only stale entries.
+    if (this._unintegratedTiles === 0) {
+      this._integrationQueue = [];
+      this.integrationHead = 0;
+    }
+    return true;
+  }
+
   adminCapacity(): number {
     const config = this.mg.config();
     return config.adminCapacity(

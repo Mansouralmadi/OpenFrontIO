@@ -14,7 +14,8 @@ import { setup } from "./util/Setup";
 import { diffGraphs, roundTrip } from "./util/Snapshot";
 
 // plains: 100x100, all 10,000 tiles land. Capacity = 2% (200) + 1% (100) per
-// built city level; integration = 5 + 5/city level + backlog/1000 per tick.
+// built city level; integration = 5 + backlog/1000 per tick empire-wide, plus
+// 10/tick per level from each city within 30 (+6 per extra level) tiles.
 const MAP = "plains";
 
 function human(game: Game, name: string): Player {
@@ -104,30 +105,74 @@ describe("tall economy: integration backlog", () => {
     expect(game.isUnintegrated(game.ref(10, 0))).toBe(true); // still b's
   });
 
-  test("the backlog decays each tick, faster with cities", async () => {
+  test("the backlog decays each tick, oldest land first", async () => {
+    const game = await spawnPhaseGame();
+    const plain = human(game, "plain");
+    conquerRect(game, plain, 0, 0, 10, 10);
+    game.endSpawnPhase();
+    conquerRect(game, plain, 0, 10, 50, 40);
+    expect(plain.unintegratedTiles()).toBe(2000);
+
+    game.addExecution(new PlayerExecution(plain));
+    game.executeNextTick(); // inits the execution
+    game.executeNextTick();
+    // 5 + 2000/1000 = 7
+    expect(plain.unintegratedTiles()).toBe(1993);
+    for (let i = 0; i < 100; i++) game.executeNextTick();
+    expect(plain.unintegratedTiles()).toBeGreaterThan(1000);
+  });
+
+  test("cities integrate the land around them, nearest first", async () => {
     const game = await spawnPhaseGame();
     const plain = human(game, "plain");
     const city = human(game, "city");
     conquerRect(game, plain, 0, 0, 10, 10);
     conquerRect(game, city, 50, 0, 10, 10);
-    addCityLevels(game, city, 55, 5, 3);
+    addCityLevels(game, city, 55, 5, 3); // radius 30 + 2*6 = 42
     game.endSpawnPhase();
     conquerRect(game, plain, 0, 10, 50, 40);
     conquerRect(game, city, 50, 10, 50, 40);
-    expect(plain.unintegratedTiles()).toBe(2000);
-    expect(city.unintegratedTiles()).toBe(2000);
 
     game.addExecution(new PlayerExecution(plain));
     game.addExecution(new PlayerExecution(city));
     game.executeNextTick(); // inits the executions
-    game.executeNextTick();
-    // 5 + 2000/1000 = 7, vs 5 + 3*5 + 2 = 22.
-    expect(plain.unintegratedTiles()).toBe(1993);
-    expect(city.unintegratedTiles()).toBe(1978);
+    for (let i = 0; i < 20; i++) game.executeNextTick();
 
-    for (let i = 0; i < 100; i++) game.executeNextTick();
-    expect(city.unintegratedTiles()).toBe(0);
-    expect(plain.unintegratedTiles()).toBeGreaterThan(1000);
+    // Two bursts of 3 levels * 10/tick * 10 ticks on top of the shared rate
+    expect(plain.unintegratedTiles() - city.unintegratedTiles()).toBe(600);
+    // Close to the city: integrated. The far corner, last in queue order and
+    // beyond the city's reach, isn't.
+    expect(game.isUnintegrated(game.ref(55, 12))).toBe(false);
+    expect(game.isUnintegrated(game.ref(70, 20))).toBe(false);
+    expect(game.isUnintegrated(game.ref(99, 49))).toBe(true);
+
+    for (let i = 0; i < 60; i++) game.executeNextTick();
+    // Everything within the radius is done
+    for (let y = 10; y < 50; y++) {
+      for (let x = 50; x < 100; x++) {
+        if ((x - 55) ** 2 + (y - 5) ** 2 <= 42 ** 2) {
+          expect(game.isUnintegrated(game.ref(x, y))).toBe(false);
+        }
+      }
+    }
+  });
+
+  test("cities only integrate their owner's land", async () => {
+    const game = await spawnPhaseGame();
+    const a = human(game, "a");
+    const b = human(game, "b");
+    conquerRect(game, a, 0, 0, 10, 10);
+    conquerRect(game, b, 20, 0, 10, 10);
+    addCityLevels(game, a, 5, 5, 1);
+    game.endSpawnPhase();
+    conquerRect(game, b, 10, 0, 10, 10); // next to a's city
+    conquerRect(game, a, 0, 10, 10, 10);
+    game.addExecution(new PlayerExecution(a));
+    game.executeNextTick();
+    for (let i = 0; i < 20; i++) game.executeNextTick();
+    expect(a.unintegratedTiles()).toBe(0);
+    expect(b.unintegratedTiles()).toBe(100);
+    expect(game.isUnintegrated(game.ref(10, 5))).toBe(true);
   });
 
   test("unintegrated land lowers max troops until it integrates", async () => {
