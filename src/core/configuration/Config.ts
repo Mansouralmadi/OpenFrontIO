@@ -467,6 +467,9 @@ export class Config {
   waterNukes(): boolean {
     return this._gameConfig.waterNukes ?? false;
   }
+  earthquakes(): boolean {
+    return this._gameConfig.earthquakes ?? false;
+  }
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
   }

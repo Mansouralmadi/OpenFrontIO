@@ -311,6 +311,168 @@ export class WaterManager {
     return this._miniWaterGraph.getComponentSize(componentId) * 4;
   }
 
+  /**
+   * Earthquake uplift: turns water tiles into land at the given elevations,
+   * synchronously. The reverse of the water-nuke path: shoreline bits and
+   * nearby water magnitudes are recomputed locally on both maps, a minimap
+   * tile becomes land only once all four of its full-map tiles are land
+   * (water wins, as in the map generator), and — because new land can split
+   * a water body, which the incremental component labeling cannot express —
+   * the minimap components are relabeled from scratch and the water graph is
+   * rebuilt right away, so no tick ever routes on a graph that sails through
+   * the new land. Returns the full-map tiles whose terrain byte changed.
+   *
+   * Callers keep raised regions free of enclosed water (see
+   * EarthquakeExecution), so no ocean bits need clearing.
+   */
+  raiseLand(
+    tiles: readonly TileRef[],
+    magnitudes: readonly number[],
+  ): TileRef[] {
+    const map = this.map;
+    const raised = new Set<TileRef>();
+    tiles.forEach((tile, i) => {
+      if (map.isWater(tile)) {
+        map.setLand(tile, magnitudes[i]);
+        raised.add(tile);
+      }
+    });
+    if (raised.size === 0) return [];
+    DebugSpan.start("WaterManager:raiseLand");
+    const changed = new Set<TileRef>(raised);
+    const w = map.width();
+    this.ensureFullMapScratch();
+    for (const g of this.computeCraterGroups(raised, w, MAX_MAG_DIST)) {
+      this.recomputeMagnitudesInBox(
+        map,
+        g,
+        this._waterStampArr!,
+        this._waterDistArr!,
+        this.bumpFullMapStamp(),
+        true,
+        changed,
+      );
+    }
+    this.refreshShorelines(map, raised, changed);
+
+    // Minimap: land only where all four source tiles are land.
+    const mini = this.miniMap;
+    const raisedMini = new Set<TileRef>();
+    for (const tile of raised) {
+      const mx = Math.floor(map.x(tile) / 2);
+      const my = Math.floor(map.y(tile) / 2);
+      if (!mini.isValidCoord(mx, my)) continue;
+      const mt = mini.ref(mx, my);
+      if (mini.isLand(mt) || raisedMini.has(mt)) continue;
+      let allLand = true;
+      let maxMag = 0;
+      for (let dy = 0; dy < 2 && allLand; dy++) {
+        for (let dx = 0; dx < 2; dx++) {
+          const fx = mx * 2 + dx;
+          const fy = my * 2 + dy;
+          const ft = map.isValidCoord(fx, fy) ? map.ref(fx, fy) : -1;
+          if (ft === -1 || !map.isLand(ft)) {
+            allLand = false;
+            break;
+          }
+          maxMag = Math.max(maxMag, map.magnitude(ft));
+        }
+      }
+      if (allLand) {
+        mini.setLand(mt, maxMag);
+        raisedMini.add(mt);
+      }
+    }
+    if (raisedMini.size > 0) {
+      const miniTotal = mini.width() * mini.height();
+      if (!this._miniDistArr || this._miniDistArr.length !== miniTotal) {
+        this._miniDistArr = new Uint16Array(miniTotal);
+        this._miniStampArr = new Uint16Array(miniTotal);
+        this._miniStamp = 0;
+      }
+      for (const g of this.computeCraterGroups(
+        raisedMini,
+        mini.width(),
+        MAX_MAG_DIST,
+      )) {
+        this.recomputeMagnitudesInBox(
+          mini,
+          g,
+          this._miniStampArr!,
+          this._miniDistArr,
+          this.bumpMiniStamp(),
+          false,
+          null,
+        );
+      }
+      this.refreshShorelines(mini, raisedMini, null);
+      if (this._miniWaterCC !== null) {
+        this._miniWaterCC.initialize();
+        for (const mt of raisedMini) this._dirtyMiniTiles.add(mt);
+        this._miniWaterGraph = new AbstractGraphBuilder(
+          mini,
+          AbstractGraphBuilder.CLUSTER_SIZE,
+          this._miniWaterGraph ?? undefined,
+          this._dirtyMiniTiles,
+          this._miniWaterCC,
+          this._builderBFS ?? undefined,
+        ).build();
+        this._dirtyMiniTiles.clear();
+        this._waterGraphDirty = false;
+        this._miniWaterHPA?.setGraph(this._miniWaterGraph);
+        this._waterGraphVersion++;
+      }
+    }
+    DebugSpan.end("WaterManager:raiseLand");
+    return [...changed];
+  }
+
+  private ensureFullMapScratch(): void {
+    const total = this.map.width() * this.map.height();
+    if (!this._waterDistArr || this._waterDistArr.length !== total) {
+      this._waterDistArr = new Uint16Array(total);
+      this._waterStampArr = new Uint16Array(total);
+      this._waterStamp = 0;
+    }
+  }
+
+  /** Shoreline bits for `tiles` and their 2-ring (impassable never counts). */
+  private refreshShorelines(
+    map: GameMap,
+    tiles: Iterable<TileRef>,
+    changed: Set<TileRef> | null,
+  ): void {
+    const seen = new Set<TileRef>();
+    const nb: TileRef[] = new Array(4);
+    const nb2: TileRef[] = new Array(4);
+    for (const tile of tiles) {
+      seen.add(tile);
+      const n = map.neighbors4(tile, nb);
+      for (let i = 0; i < n; i++) {
+        seen.add(nb[i]);
+        const n2 = map.neighbors4(nb[i], nb2);
+        for (let j = 0; j < n2; j++) seen.add(nb2[j]);
+      }
+    }
+    for (const tile of seen) {
+      let shore = false;
+      if (!map.isImpassable(tile)) {
+        const land = map.isLand(tile);
+        const n = map.neighbors4(tile, nb);
+        for (let i = 0; i < n; i++) {
+          if (!map.isImpassable(nb[i]) && map.isLand(nb[i]) !== land) {
+            shore = true;
+            break;
+          }
+        }
+      }
+      if (shore === map.isShoreline(tile)) continue;
+      if (shore) map.setShorelineBit(tile);
+      else map.clearShorelineBit(tile);
+      changed?.add(tile);
+    }
+  }
+
   private finalizeWaterChanges(
     convertedTiles: TileRef[],
     changedTiles: TileRef[],

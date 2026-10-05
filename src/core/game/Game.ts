@@ -971,6 +971,15 @@ export interface Game extends GameMap {
   /** Queue a land tile for conversion to water (batched every few ticks). Tile must be unowned. */
   queueWaterConversion(tile: TileRef): void;
 
+  /**
+   * Earthquakes: the tile sinks into the sea at the end of this tick
+   * (whatever the waterNukes option says). Its owner, if any, loses it now.
+   */
+  sinkLand(tile: TileRef): void;
+
+  /** Earthquakes: water tiles rise as unowned land at the given elevations, now. */
+  raiseLand(tiles: readonly TileRef[], magnitudes: readonly number[]): void;
+
   /** Queue a tile that was inside a nuke blast radius (for nukeable layer destruction). */
   queueNukeImpact(tile: TileRef): void;
 

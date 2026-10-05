@@ -12,6 +12,7 @@ import { DeleteUnitExecutionSnapshot } from "../execution/DeleteUnitExecution";
 import { DonateGoldExecutionSnapshot } from "../execution/DonateGoldExecution";
 import { DonateTroopsExecutionSnapshot } from "../execution/DonateTroopExecution";
 import { DoomsdayClockExecutionSnapshot } from "../execution/DoomsdayClockExecution";
+import { EarthquakeExecutionSnapshot } from "../execution/EarthquakeExecution";
 import { EmbargoAllExecutionSnapshot } from "../execution/EmbargoAllExecution";
 import { EmbargoExecutionSnapshot } from "../execution/EmbargoExecution";
 import { EmojiExecutionSnapshot } from "../execution/EmojiExecution";
@@ -68,6 +69,7 @@ export const EXECUTION_SNAPSHOT_TYPES = [
   DonateTroopsExecutionSnapshot,
   HireMercenariesExecutionSnapshot,
   DoomsdayClockExecutionSnapshot,
+  EarthquakeExecutionSnapshot,
   EmbargoAllExecutionSnapshot,
   EmbargoExecutionSnapshot,
   EmojiExecutionSnapshot,

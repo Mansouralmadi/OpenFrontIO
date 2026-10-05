@@ -25,7 +25,9 @@ export interface GameMap {
   terrainByte(ref: TileRef): number;
   // Terrain setters
   setWater(ref: TileRef): void;
-  /** Bumped every time a land tile turns to water; lets callers cache anything derived from water components. */
+  /** Water → plain land (no shoreline/ocean bits) at the given elevation. Earthquakes. */
+  setLand(ref: TileRef, magnitude: number): void;
+  /** Bumped every time a tile flips between land and water; lets callers cache anything derived from water components. */
   waterVersion(): number;
   setShorelineBit(ref: TileRef): void;
   clearShorelineBit(ref: TileRef): void;
@@ -279,6 +281,17 @@ export class GameMapImpl implements GameMap {
     this.waterVersion_++;
     this.terrain[ref] = 0; // Lake water: no land, no ocean, no shoreline, magnitude 0
     this.numLandTiles_--;
+  }
+
+  setLand(ref: TileRef, magnitude: number): void {
+    if (this.isLand(ref)) return;
+    this.noteTerrainEdit(ref);
+    this.waterVersion_++;
+    // Impassable (31) is reserved; risen land is always passable.
+    this.terrain[ref] =
+      (1 << GameMapImpl.IS_LAND_BIT) |
+      Math.min(magnitude, GameMapImpl.IMPASSABLE_MAGNITUDE - 1);
+    this.numLandTiles_++;
   }
 
   setShorelineBit(ref: TileRef): void {

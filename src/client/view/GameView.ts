@@ -976,6 +976,9 @@ export class GameView implements GameMap {
   setWater(ref: TileRef): void {
     this._map.setWater(ref);
   }
+  setLand(ref: TileRef, magnitude: number): void {
+    this._map.setLand(ref, magnitude);
+  }
   setShorelineBit(ref: TileRef): void {
     this._map.setShorelineBit(ref);
   }

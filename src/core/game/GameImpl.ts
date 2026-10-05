@@ -313,6 +313,18 @@ export class GameImpl implements Game {
     this._waterManager.queueTile(tile);
   }
 
+  sinkLand(tile: TileRef): void {
+    if (!this.isLand(tile) || this._map.isImpassable(tile)) return;
+    if (this.hasOwner(tile)) this.relinquish(tile);
+    this._waterManager.queueTile(tile);
+  }
+
+  raiseLand(tiles: readonly TileRef[], magnitudes: readonly number[]): void {
+    for (const tile of this._waterManager.raiseLand(tiles, magnitudes)) {
+      this.recordTileUpdate(tile);
+    }
+  }
+
   queueNukeImpact(tile: TileRef): void {
     this._nukeImpactQueue.push(tile);
   }
@@ -1326,6 +1338,9 @@ export class GameImpl implements Game {
   }
   setMagnitude(ref: TileRef, value: number): void {
     this._map.setMagnitude(ref, value);
+  }
+  setLand(ref: TileRef, magnitude: number): void {
+    this._map.setLand(ref, magnitude);
   }
   ownerID(ref: TileRef): number {
     return this._map.ownerID(ref);

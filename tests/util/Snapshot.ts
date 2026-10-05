@@ -150,6 +150,13 @@ export const DERIVED_FIELDS = new Set<string>([
   "myUnitCountMemo",
   "myUnitsOwnedMemo",
   "nearbyMemo",
+  // WaterManager: lazily allocated per-call BFS scratch (stamp + distance)
+  "_waterDistArr",
+  "_waterStampArr",
+  "_waterStamp",
+  "_miniDistArr",
+  "_miniStampArr",
+  "_miniStamp",
   // SharedWaterCache
   "playerWater",
   // Config
