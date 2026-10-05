@@ -596,7 +596,7 @@ export class NationNukeBehavior {
       // Get the blast radius of the teammate's nuke
       const teammateInnerRadius = this.game
         .config()
-        .nukeMagnitudes(nuke.type()).inner;
+        .nukeMagnitudes(nuke.type(), this.game).inner;
 
       // Check if the blast zones overlap
       // They overlap if distance between targets < sum of the two radii

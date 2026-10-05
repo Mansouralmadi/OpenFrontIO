@@ -137,6 +137,7 @@
   },
   "build_menu": {
     "desc": {
+      "antimatter_bomb": "Continent-wide annihilation. Takes two SAM hits to stop",
       "atom_bomb": "Small explosion",
       "city": "Increases max population",
       "defense_post": "Increases defenses of nearby borders",
@@ -558,6 +559,7 @@
     "alliance_request_sent": "Alliance request sent to {name}.",
     "alliance_request_status": "{name} {status} your alliance request",
     "ally_joined_war": "{name} joined your war against {enemy}",
+    "antimatter_bomb_detonated": "{name} - antimatter bomb detonated",
     "atom_bomb_detonated": "{name} - atom bomb detonated",
     "attack_cancelled_retreat": "Attack cancelled, {troops} soldiers killed during retreat",
     "attack_request": "{name} requests you attack {target}",
@@ -1786,6 +1788,7 @@
     "title": "Tutorial"
   },
   "unit_type": {
+    "antimatter_bomb": "Antimatter Bomb",
     "atom_bomb": "Atom Bomb",
     "boat": "Boat",
     "city": "City",

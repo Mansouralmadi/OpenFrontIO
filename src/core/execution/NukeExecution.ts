@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { atan2 } from "../DetMath";
 import {
   Execution,
   Game,
@@ -31,9 +30,16 @@ import type {
 } from "../snapshot/SnapshotContext";
 import { zInt, zNum, zPlayerRef, zRef, zTile } from "../snapshot/SnapshotType";
 import { NukeType } from "../StatsSchemas";
+import { waterCraterTiles } from "./NukeCrater";
 import { listNukeBreakAlliance } from "./Util";
 
 const SPRITE_RADIUS = 16;
+
+const DETONATION_MESSAGE_KEYS: Partial<Record<UnitType, string>> = {
+  [UnitType.AtomBomb]: "events_display.atom_bomb_detonated",
+  [UnitType.HydrogenBomb]: "events_display.hydrogen_bomb_detonated",
+  [UnitType.AntimatterBomb]: "events_display.antimatter_bomb_detonated",
+};
 
 export class NukeExecution implements Execution {
   private active = true;
@@ -74,60 +80,20 @@ export class NukeExecution implements Execution {
     if (this.nuke === null) {
       throw new Error("Not initialized");
     }
-    const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
+    const magnitude = this.mg
+      .config()
+      .nukeMagnitudes(this.nuke.type(), this.mg);
     const rand = new PseudoRandom(this.mg.ticks());
     const inner2 = magnitude.inner * magnitude.inner;
     const outer2 = magnitude.outer * magnitude.outer;
 
     if (this.mg.config().waterNukes()) {
-      // Smooth irregular boundary for water nukes.
-      // Generate random radii at angular samples, then smooth them so the
-      // boundary undulates gently instead of creating spiky flower shapes.
-      // This avoids scattered land pixels that players would have to boat
-      // to individually in order to reclaim.
-      const NUM_SAMPLES = 16;
-      const radiiSq: number[] = new Array(NUM_SAMPLES);
-      for (let i = 0; i < NUM_SAMPLES; i++) {
-        radiiSq[i] = rand.nextFloat(inner2, outer2);
-      }
-      // Smooth the ring: 1 light pass (60% original, 20% each neighbour)
-      const prev = [...radiiSq];
-      for (let i = 0; i < NUM_SAMPLES; i++) {
-        const l = (i - 1 + NUM_SAMPLES) % NUM_SAMPLES;
-        const r = (i + 1) % NUM_SAMPLES;
-        radiiSq[i] = prev[i] * 0.6 + prev[l] * 0.2 + prev[r] * 0.2;
-      }
-
-      const cx = this.mg.x(this.dst);
-      const cy = this.mg.y(this.dst);
-      const outer = magnitude.outer;
-
-      const result = new Set<TileRef>();
-      const x0 = Math.max(0, cx - outer);
-      const y0 = Math.max(0, cy - outer);
-      const x1 = Math.min(this.mg.width() - 1, cx + outer);
-      const y1 = Math.min(this.mg.height() - 1, cy + outer);
-      for (let py = y0; py <= y1; py++) {
-        for (let px = x0; px <= x1; px++) {
-          const dx = px - cx;
-          const dy = py - cy;
-          const d2 = dx * dx + dy * dy;
-          if (d2 > outer2) continue;
-          if (d2 > inner2) {
-            const angle = atan2(dy, dx) + Math.PI; // [0, 2π]
-            const t = (angle / (2 * Math.PI)) * NUM_SAMPLES;
-            const i0 = Math.floor(t) % NUM_SAMPLES;
-            const i1 = (i0 + 1) % NUM_SAMPLES;
-            const frac = t - Math.floor(t);
-            const threshold = radiiSq[i0] * (1 - frac) + radiiSq[i1] * frac;
-            if (d2 > threshold) continue;
-          }
-          const tile = this.mg.ref(px, py);
-          if (this.mg.isImpassable(tile)) continue;
-          result.add(tile);
-        }
-      }
-      this.tilesToDestroyCache = result;
+      this.tilesToDestroyCache = waterCraterTiles(
+        this.mg,
+        this.dst,
+        magnitude,
+        this.mg.ticks() ^ Math.imul(this.dst, 0x9e3779b1),
+      );
     } else {
       this.tilesToDestroyCache = this.mg.bfs(this.dst, (_, n: TileRef) => {
         const d2 = this.mg?.euclideanDistSquared(this.dst, n) ?? 0;
@@ -154,7 +120,9 @@ export class NukeExecution implements Execution {
       return;
     }
 
-    const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
+    const magnitude = this.mg
+      .config()
+      .nukeMagnitudes(this.nuke.type(), this.mg);
 
     const playersToBreakAllianceWith = listNukeBreakAlliance({
       game: this.mg,
@@ -252,6 +220,14 @@ export class NukeExecution implements Execution {
             MessageType.HYDROGEN_BOMB_INBOUND,
             target.id(),
           );
+        } else if (this.nukeType === UnitType.AntimatterBomb) {
+          this.mg.displayIncomingUnit(
+            this.nuke.id(),
+            // TODO TranslateText
+            `${this.player.displayName()} - antimatter bomb inbound`,
+            MessageType.HYDROGEN_BOMB_INBOUND,
+            target.id(),
+          );
         }
 
         if (this.nukeType === UnitType.MIRV) {
@@ -288,8 +264,10 @@ export class NukeExecution implements Execution {
 
       // Check for very close SAM missiles that are targeting this.
       // The SAM logic should be the main source of truth, since missiles can skip pixels
-      // and be affected by execution order
+      // and be affected by execution order. A nuke that survives a SAM hit
+      // (antimatter bomb, 2 health) detonates anyway.
       const shouldBeDestroyed =
+        this.nuke.health() <= 1 &&
         this.mg.nearbyUnits(
           this.dst,
           this.mg.config().defaultSamMissileSpeed(),
@@ -392,7 +370,7 @@ export class NukeExecution implements Execution {
     const mg = this.mg;
     const config = mg.config();
 
-    const magnitude = config.nukeMagnitudes(this.nuke.type());
+    const magnitude = config.nukeMagnitudes(this.nuke.type(), mg);
     const toDestroy = this.tilesToDestroy();
 
     // Retrieve all impacted players and the number of tiles
@@ -468,13 +446,19 @@ export class NukeExecution implements Execution {
       if (
         type === UnitType.AtomBomb ||
         type === UnitType.HydrogenBomb ||
+        type === UnitType.AntimatterBomb ||
         type === UnitType.MIRVWarhead ||
         type === UnitType.MIRV ||
         type === UnitType.SAMMissile
       ) {
         continue;
       }
-      if (mg.euclideanDistSquared(dst, unit.tile()) < outer2) {
+      // Water-nuke craters can reach past `outer`; nothing survives on a
+      // flooded tile.
+      if (
+        mg.euclideanDistSquared(dst, unit.tile()) < outer2 ||
+        (config.waterNukes() && toDestroy.has(unit.tile()))
+      ) {
         // treatAFKFriendly matches warship targeting: a disconnected
         // teammate's or ally's units are still not kills.
         const friendly = this.player.isFriendly(unit.owner(), true);
@@ -487,14 +471,8 @@ export class NukeExecution implements Execution {
     this.nuke.setReachedTarget();
     this.nuke.delete(false);
 
-    if (
-      this.nukeType === UnitType.AtomBomb ||
-      this.nukeType === UnitType.HydrogenBomb
-    ) {
-      const messageKey =
-        this.nukeType === UnitType.AtomBomb
-          ? "events_display.atom_bomb_detonated"
-          : "events_display.hydrogen_bomb_detonated";
+    const messageKey = DETONATION_MESSAGE_KEYS[this.nukeType];
+    if (messageKey !== undefined) {
       for (const [impactedPlayer] of tilesPerPlayers) {
         mg.displayMessage(
           messageKey,

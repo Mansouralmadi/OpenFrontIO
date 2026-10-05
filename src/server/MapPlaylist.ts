@@ -420,6 +420,7 @@ export class MapPlaylist {
         UnitType.AtomBomb,
         UnitType.HydrogenBomb,
         UnitType.MIRV,
+        UnitType.AntimatterBomb,
         UnitType.SAMLauncher,
       );
     }

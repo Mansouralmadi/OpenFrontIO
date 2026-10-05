@@ -1,5 +1,5 @@
 import type { NukeTelegraphData, UnitState } from "../../types";
-import { NUKE_MAGNITUDES } from "../../types";
+import { NUKE_MAGNITUDES, nukeMagnitudeFor } from "../../types";
 
 // Must match RelationMatrix.ts
 const RELATION_FRIENDLY = 1;
@@ -49,6 +49,8 @@ export function extractNukeTelegraphs(
   relationSize = 0,
   motionPlans?: ReadonlyMap<number, { startTick: number }>,
   currentTick = 0,
+  // Needed for the map-scaled antimatter bomb radius.
+  mapH = 0,
 ): NukeTelegraphData[] {
   const telegraphs: NukeTelegraphData[] = [];
   for (const u of units.values()) {
@@ -57,7 +59,7 @@ export function extractNukeTelegraphs(
     const plan = motionPlans?.get(u.id);
     if (plan && plan.startTick > currentTick) continue;
 
-    const mag = NUKE_MAGNITUDES[u.unitType];
+    const mag = nukeMagnitudeFor(u.unitType, mapW, mapH);
     if (!mag) continue;
     telegraphs.push({
       x: u.targetTile % mapW,

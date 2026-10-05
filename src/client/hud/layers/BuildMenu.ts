@@ -8,6 +8,7 @@ import {
   BuildMenus,
   Gold,
   PlayerBuildableUnitType,
+  SiloNukes,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -29,6 +30,7 @@ import { GameView } from "../../view";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
+const antimatterBombIcon = assetUrl("images/AntimatterBombIcon.svg");
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
 const mirvIcon = assetUrl("images/MIRVIcon.svg");
 const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
@@ -67,6 +69,13 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: hydrogenBombIcon,
       description: "build_menu.desc.hydrogen_bomb",
       key: "unit_type.hydrogen_bomb",
+      countable: false,
+    },
+    {
+      unitType: UnitType.AntimatterBomb,
+      icon: antimatterBombIcon,
+      description: "build_menu.desc.antimatter_bomb",
+      key: "unit_type.antimatter_bomb",
       countable: false,
     },
     {
@@ -391,11 +400,9 @@ export class BuildMenu extends LitElement implements Controller {
         ),
       );
     } else if (buildableUnit.canBuild) {
-      const rocketDirectionUp =
-        buildableUnit.type === UnitType.AtomBomb ||
-        buildableUnit.type === UnitType.HydrogenBomb
-          ? this.uiState.rocketDirectionUp
-          : undefined;
+      const rocketDirectionUp = SiloNukes.has(buildableUnit.type)
+        ? this.uiState.rocketDirectionUp
+        : undefined;
       this.eventBus.emit(
         new BuildUnitIntentEvent(buildableUnit.type, tile, rocketDirectionUp),
       );

@@ -27,6 +27,7 @@ import { NukeType } from "../StatsSchemas";
 const INTERCEPTED_UNIT_TRANSLATION_KEYS: Partial<Record<UnitType, string>> = {
   [UnitType.AtomBomb]: "unit_type.atom_bomb",
   [UnitType.HydrogenBomb]: "unit_type.hydrogen_bomb",
+  [UnitType.AntimatterBomb]: "unit_type.antimatter_bomb",
   [UnitType.MIRVWarhead]: "unit_type.mirv",
 };
 
@@ -64,6 +65,7 @@ export class SAMMissileExecution implements Execution {
     const nukesWhitelist = [
       UnitType.AtomBomb,
       UnitType.HydrogenBomb,
+      UnitType.AntimatterBomb,
       UnitType.MIRVWarhead,
     ];
     if (
@@ -86,6 +88,15 @@ export class SAMMissileExecution implements Execution {
         this.targetTile,
       );
       if (result.status === PathStatus.COMPLETE) {
+        if (this.target.health() > 1) {
+          // Armoured nuke (antimatter bomb): the hit only damages it; free it
+          // for the next SAM.
+          this.target.modifyHealth(-1, this._owner);
+          this.target.setTargetedBySAM(false);
+          this.active = false;
+          this.SAMMissile.delete(false);
+          return;
+        }
         this.mg.displayMessage(
           "events_display.missile_intercepted",
           MessageType.SAM_HIT,

@@ -210,6 +210,9 @@ export enum UnitType {
   MIRVWarhead = "MIRV Warhead",
   Train = "Train",
   Factory = "Factory",
+  // Appended (not grouped with the nukes) so existing enum indices in the
+  // binary wire format and snapshots stay stable.
+  AntimatterBomb = "Antimatter Bomb",
 }
 
 export enum TrainType {
@@ -221,14 +224,23 @@ export enum TrainType {
 export const Nukes = unitTypeGroup([
   UnitType.AtomBomb,
   UnitType.HydrogenBomb,
+  UnitType.AntimatterBomb,
   UnitType.MIRVWarhead,
   UnitType.MIRV,
+] as const);
+
+/** Single-warhead nukes launched from a silo along a parabola (not the MIRV). */
+export const SiloNukes = unitTypeGroup([
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.AntimatterBomb,
 ] as const);
 
 export const BuildableAttacks = unitTypeGroup([
   UnitType.AtomBomb,
   UnitType.HydrogenBomb,
   UnitType.MIRV,
+  UnitType.AntimatterBomb,
   UnitType.Warship,
 ] as const);
 
@@ -285,6 +297,11 @@ export interface UnitParamsMap {
   };
 
   [UnitType.HydrogenBomb]: {
+    targetTile?: number;
+    trajectory: TrajectoryTile[];
+  };
+
+  [UnitType.AntimatterBomb]: {
     targetTile?: number;
     trajectory: TrajectoryTile[];
   };

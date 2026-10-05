@@ -4,6 +4,7 @@
  */
 
 import {
+  UT_ANTIMATTER_BOMB,
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
   UT_MIRV_WARHEAD,
@@ -23,6 +24,9 @@ export function nukeExplosionRadius(
       return fx.nukeRadiusAtom;
     case UT_HYDROGEN_BOMB:
       return fx.nukeRadiusHydro;
+    case UT_ANTIMATTER_BOMB:
+      // Blast is ~2.5x the hydrogen bomb's on World (outer 255 vs 100).
+      return fx.nukeRadiusHydro * 2.5;
     case UT_MIRV_WARHEAD:
       return fx.nukeRadiusMirv;
     default:

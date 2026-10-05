@@ -16,6 +16,7 @@ import {
   BuildableUnit,
   bulkCost,
   PlayerBuildableUnitType,
+  SiloNukes,
   UnitType,
 } from "../../core/game/Game";
 import { TileRef } from "../../core/game/GameMap";
@@ -37,9 +38,9 @@ import {
 import { UIState } from "../UIState";
 import { GameView } from "../view";
 
-/** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
+/** True for silo nukes: ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
 export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
-  return unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb;
+  return SiloNukes.has(unitType);
 }
 
 // tSamIntercept value used to flag an untargetable (impassable) destination:
@@ -230,11 +231,7 @@ export class BuildPreviewController implements Controller {
     let targetingAlly = false;
     const myPlayer = this.game.myPlayer();
     const nukeType = this.ghostUnit.buildableUnit.type;
-    if (
-      tileRef &&
-      myPlayer &&
-      (nukeType === UnitType.AtomBomb || nukeType === UnitType.HydrogenBomb)
-    ) {
+    if (tileRef && myPlayer && SiloNukes.has(nukeType)) {
       this.connectedAllySmallIds.clear();
       const allies = myPlayer.allies();
       for (let i = 0; i < allies.length; i++) {
@@ -248,7 +245,7 @@ export class BuildPreviewController implements Controller {
         targetingAlly = wouldNukeBreakAlliance({
           game: this.game,
           targetTile: tileRef,
-          magnitude: this.game.config().nukeMagnitudes(nukeType),
+          magnitude: this.game.config().nukeMagnitudes(nukeType, this.game),
           allySmallIds: this.connectedAllySmallIds,
           threshold: this.game.config().nukeAllianceBreakThreshold(),
         });
@@ -328,7 +325,7 @@ export class BuildPreviewController implements Controller {
       return;
     }
     const type = this.ghostUnit.buildableUnit.type;
-    if (type !== UnitType.AtomBomb && type !== UnitType.HydrogenBomb) {
+    if (!SiloNukes.has(type)) {
       this.clearNukeTrajectory();
       return;
     }
@@ -384,7 +381,7 @@ export class BuildPreviewController implements Controller {
         ? listNukeBreakAlliance({
             game: this.game,
             targetTile: tileRef,
-            magnitude: this.game.config().nukeMagnitudes(type),
+            magnitude: this.game.config().nukeMagnitudes(type, this.game),
             threshold: this.game.config().nukeAllianceBreakThreshold(),
           })
         : new Set();
@@ -454,7 +451,10 @@ export class BuildPreviewController implements Controller {
       }
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
-        rangeRadius = this.game.config().nukeMagnitudes(u.type).outer;
+      case UnitType.AntimatterBomb:
+        rangeRadius = this.game
+          .config()
+          .nukeMagnitudes(u.type, this.game).outer;
         break;
       case UnitType.Factory:
         rangeRadius = this.game.config().trainStationMaxRange();
@@ -554,10 +554,9 @@ export class BuildPreviewController implements Controller {
       }
 
       const isNuke = unitType === UnitType.AtomBomb;
-      const rocketDirectionUp =
-        unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb
-          ? this.uiState.rocketDirectionUp
-          : undefined;
+      const rocketDirectionUp = SiloNukes.has(unitType)
+        ? this.uiState.rocketDirectionUp
+        : undefined;
       this.eventBus.emit(
         new BuildUnitIntentEvent(
           unitType,
@@ -581,9 +580,7 @@ export class BuildPreviewController implements Controller {
     const duration = this.userSettings.nukeAllianceSafetyDuration();
     if (
       duration <= 0 ||
-      (unitType !== UnitType.AtomBomb &&
-        unitType !== UnitType.HydrogenBomb &&
-        unitType !== UnitType.MIRV)
+      (!SiloNukes.has(unitType) && unitType !== UnitType.MIRV)
     ) {
       return false;
     }
@@ -609,7 +606,7 @@ export class BuildPreviewController implements Controller {
         : listNukeBreakAlliance({
             game: this.game,
             targetTile: tile,
-            magnitude: this.game.config().nukeMagnitudes(unitType),
+            magnitude: this.game.config().nukeMagnitudes(unitType, this.game),
             threshold: this.game.config().nukeAllianceBreakThreshold(),
           });
 

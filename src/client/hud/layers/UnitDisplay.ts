@@ -15,6 +15,7 @@ import { UIState } from "../../UIState";
 import { renderNumber, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {
+  antimatterBombIcon,
   atomBombIcon,
   cityIcon,
   defensePostIcon,
@@ -95,6 +96,7 @@ export class UnitDisplay extends LitElement implements Controller {
     switch (item) {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
+      case UnitType.AntimatterBomb:
       case UnitType.MIRV:
         return (
           this.cost(item) <= (player?.gold() ?? 0n) &&
@@ -213,6 +215,13 @@ export class UnitDisplay extends LitElement implements Controller {
             "mirv",
             this.keybinds["buildMIRV"]?.key ?? "0",
           )}
+          ${this.renderUnitItem(
+            antimatterBombIcon,
+            null,
+            UnitType.AntimatterBomb,
+            "antimatter_bomb",
+            "",
+          )}
         </div>
       </div>
     `;
@@ -253,9 +262,9 @@ export class UnitDisplay extends LitElement implements Controller {
                 class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
               >
                 <div class="font-bold text-sm mb-1">
-                  ${translateText(
-                    "unit_type." + structureKey,
-                  )}${` [${displayHotkey}]`}
+                  ${translateText("unit_type." + structureKey)}${displayHotkey
+                    ? ` [${displayHotkey}]`
+                    : ""}
                 </div>
                 <div class="p-2">
                   ${translateText("build_menu.desc." + structureKey)}
@@ -295,6 +304,7 @@ export class UnitDisplay extends LitElement implements Controller {
             switch (unitType) {
               case UnitType.AtomBomb:
               case UnitType.HydrogenBomb:
+              case UnitType.AntimatterBomb:
                 this.eventBus?.emit(
                   new ToggleStructureEvent([
                     UnitType.MissileSilo,

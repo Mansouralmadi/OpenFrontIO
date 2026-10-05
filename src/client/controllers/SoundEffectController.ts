@@ -125,6 +125,7 @@ export class SoundEffectController implements Controller {
         this.onMirvWarheadDetonation(unit);
         break;
       case UnitType.HydrogenBomb:
+      case UnitType.AntimatterBomb:
         this.onNukeDetonation(unit, "hydrogen-hit");
         break;
     }
@@ -148,6 +149,7 @@ export class SoundEffectController implements Controller {
         this.emit("atom-launch");
         break;
       case UnitType.HydrogenBomb:
+      case UnitType.AntimatterBomb:
         this.emit("hydrogen-launch");
         break;
       case UnitType.MIRV:

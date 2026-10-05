@@ -555,6 +555,7 @@ export class GameView implements GameMap {
       f.relationSize,
       this.motion.gridPlans(),
       gu.tick,
+      this._map.height(),
     );
     f.attackRings = this._myPlayer
       ? extractAttackRings(

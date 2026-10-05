@@ -113,7 +113,8 @@ export class ConstructionExecution implements Execution {
     const player = this.player;
     switch (this.constructionType) {
       case UnitType.AtomBomb:
-      case UnitType.HydrogenBomb: {
+      case UnitType.HydrogenBomb:
+      case UnitType.AntimatterBomb: {
         const count = this.amount ?? 1;
         for (let i = 0; i < count; i++) {
           // NukeExecution staggers same-tick launches per silo itself.

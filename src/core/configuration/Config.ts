@@ -23,6 +23,7 @@ import { UserSettings } from "../game/UserSettings";
 import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, toInt, within } from "../Util";
+import { antimatterBombMagnitude } from "./AntimatterBomb";
 import {
   DEFAULT_ALLIANCE_DURATION_MINUTES,
   MAX_ALLIANCES,
@@ -669,15 +670,15 @@ export class Config {
         break;
       case UnitType.MIRV:
         info = {
-          cost: (game: Game, player: Player) => {
-            if (
-              player.type() === PlayerType.Human &&
-              this.hasInfiniteGoldFor(player)
-            ) {
-              return 0n;
-            }
-            return 25_000_000n + BigInt(game.mirvsLaunched()) * 15_000_000n;
-          },
+          cost: (game: Game, player: Player) => this.mirvCost(game, player),
+        };
+        break;
+      case UnitType.AntimatterBomb:
+        info = {
+          // Priced exactly like the MIRV (same formula, same escalation).
+          cost: (game: Game, player: Player) => this.mirvCost(game, player),
+          // Takes two SAM hits to bring down (see SAMMissileExecution).
+          maxHealth: 2,
         };
         break;
       case UnitType.MIRVWarhead:
@@ -751,6 +752,13 @@ export class Config {
 
     this.unitInfoCache.set(type, info);
     return info;
+  }
+
+  private mirvCost(game: Game, player: Player): Gold {
+    if (player.type() === PlayerType.Human && this.hasInfiniteGoldFor(player)) {
+      return 0n;
+    }
+    return 25_000_000n + BigInt(game.mirvsLaunched()) * 15_000_000n;
   }
 
   private hasInfiniteGoldFor(player: Player | PlayerView): boolean {
@@ -1239,8 +1247,18 @@ export class Config {
     return BigInt(Math.floor(Number(baseRate) * multiplier));
   }
 
-  nukeMagnitudes(unitType: UnitType): NukeMagnitude {
+  /** Blast radii in tiles. `map` is required for the antimatter bomb. */
+  nukeMagnitudes(
+    unitType: UnitType,
+    map?: { width(): number; height(): number },
+  ): NukeMagnitude {
     switch (unitType) {
+      case UnitType.AntimatterBomb: {
+        if (map === undefined) {
+          throw new Error("Antimatter bomb magnitude needs the map size");
+        }
+        return antimatterBombMagnitude(map.width(), map.height());
+      }
       case UnitType.MIRVWarhead:
         return { inner: 12, outer: 18 };
       case UnitType.AtomBomb:
@@ -1259,6 +1277,7 @@ export class Config {
     switch (unitType) {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
+      case UnitType.AntimatterBomb:
         return 10;
       case UnitType.MIRV:
         return 15;
