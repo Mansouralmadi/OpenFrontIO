@@ -1013,6 +1013,14 @@ export class GameView implements GameMap {
   setUnintegrated(ref: TileRef, value: boolean): void {
     return this._map.setUnintegrated(ref, value);
   }
+
+  isDetached(ref: TileRef): boolean {
+    return this._map.isDetached(ref);
+  }
+
+  setDetached(ref: TileRef, value: boolean): void {
+    return this._map.setDetached(ref, value);
+  }
   isBorder(ref: TileRef): boolean {
     return this._map.isBorder(ref);
   }

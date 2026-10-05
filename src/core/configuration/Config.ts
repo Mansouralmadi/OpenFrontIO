@@ -293,6 +293,15 @@ const TALL_ECONOMY = {
   cityIntegrationRadiusPerLevel: 6,
   cityIntegrationMaxRadius: 60,
   cityIntegrationIntervalTicks: 10,
+  // A city pays 1 + distance / distanceCostDivisor of its budget per tile, so
+  // land within a few tiles turns solid almost at once while the edge of the
+  // radius is slow: 1 at 0-4 tiles, 3 at 10, 7 at 30, 13 at 60.
+  cityIntegrationDistanceCostDivisor: 5,
+  // Detached land (not 4-connected through its owner's territory to the
+  // largest piece of it: boat landings, cut-off pockets) costs this many times
+  // the budget, both for the empire-wide queue and for cities (a city in a
+  // pocket still works on it, at the reduced rate).
+  detachedIntegrationCost: 4,
   // Administrative capacity in per-mille of the map's land tiles: 2% base,
   // +1% per built city level. Scaled to the map so tiny and huge maps behave
   // alike.
@@ -300,6 +309,27 @@ const TALL_ECONOMY = {
   capacityPerCityLevelPermille: 10,
   // Economic tiles beyond capacity count at this weight.
   overextensionWeight: 0.5,
+};
+
+// Rebellions: a large connected region of a player's land that stays
+// unintegrated for too long breaks away as a new AI nation. Humans and nations
+// only (not tribes), FFA only (a team game would put the rebels on a random
+// team).
+const REBELLION = {
+  // Each player is checked once per interval (staggered by smallID).
+  checkIntervalTicks: 10 * 10,
+  // A tile counts toward a rebellion once it has sat unintegrated this long.
+  unintegratedTicks: 60 * 10,
+  // No rebellions in the first minutes after the spawn phase.
+  graceTicks: 2 * 60 * 10,
+  // After a rebellion the same player can't suffer another for this long.
+  cooldownTicks: 3 * 60 * 10,
+  // Smallest region (4-connected long-unintegrated tiles) that can rebel, in
+  // per-mille of the map's land tiles.
+  minSizePermille: 15,
+  // A rebellion takes at most this share of the owner's unintegrated land
+  // (but never less than the minimum size).
+  maxShareOfUnintegrated: 0.5,
 };
 
 // Mercenaries: gold buys a temporary batch of troops above the troop cap.
@@ -1122,6 +1152,30 @@ export class Config {
 
   cityIntegrationIntervalTicks(): number {
     return TALL_ECONOMY.cityIntegrationIntervalTicks;
+  }
+
+  /** Budget a city spends integrating one tile this many (whole) tiles away. */
+  cityIntegrationCost(distance: number): number {
+    return (
+      1 + Math.floor(distance / TALL_ECONOMY.cityIntegrationDistanceCostDivisor)
+    );
+  }
+
+  /** Budget multiplier for integrating land cut off from the main territory. */
+  detachedIntegrationCost(): number {
+    return TALL_ECONOMY.detachedIntegrationCost;
+  }
+
+  rebellion(): typeof REBELLION {
+    return REBELLION;
+  }
+
+  /** Smallest region that can rebel on a map with this many land tiles. */
+  rebellionMinTiles(landTiles: number): number {
+    return Math.max(
+      1,
+      Math.floor((landTiles * REBELLION.minSizePermille) / 1000),
+    );
   }
 
   /** Troops one mercenary hire adds. */

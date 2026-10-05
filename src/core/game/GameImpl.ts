@@ -275,6 +275,16 @@ export class GameImpl implements Game {
     this.recordTileUpdate(tile);
   }
 
+  isDetached(tile: TileRef): boolean {
+    return this._map.isDetached(tile);
+  }
+
+  setDetached(tile: TileRef, value: boolean): void {
+    if (this._map.isDetached(tile) === value) return;
+    this._map.setDetached(tile, value);
+    this.recordTileUpdate(tile);
+  }
+
   setFallout(tile: TileRef, value: boolean) {
     if (value && this.hasOwner(tile)) {
       throw Error(`cannot set fallout, tile ${tile} has owner`);

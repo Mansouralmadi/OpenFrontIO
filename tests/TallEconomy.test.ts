@@ -1,5 +1,6 @@
 import { vi } from "vitest";
 import { pow } from "../src/core/DetMath";
+import { integrateNearCities } from "../src/core/execution/CityIntegration";
 import { NationStructureBehavior } from "../src/core/execution/nation/NationStructureBehavior";
 import { PlayerExecution } from "../src/core/execution/PlayerExecution";
 import {
@@ -138,15 +139,15 @@ describe("tall economy: integration backlog", () => {
     game.executeNextTick(); // inits the executions
     for (let i = 0; i < 20; i++) game.executeNextTick();
 
-    // Two bursts of 3 levels * 10/tick * 10 ticks on top of the shared rate
-    expect(plain.unintegratedTiles() - city.unintegratedTiles()).toBe(600);
+    // Two bursts of 3 levels * 10/tick * 10 ticks of budget on top of the
+    // shared rate, but the nearest land is 5+ tiles out and costs 2-3 a tile.
+    expect(plain.unintegratedTiles() - city.unintegratedTiles()).toBe(198);
     // Close to the city: integrated. The far corner, last in queue order and
     // beyond the city's reach, isn't.
     expect(game.isUnintegrated(game.ref(55, 12))).toBe(false);
-    expect(game.isUnintegrated(game.ref(70, 20))).toBe(false);
     expect(game.isUnintegrated(game.ref(99, 49))).toBe(true);
 
-    for (let i = 0; i < 60; i++) game.executeNextTick();
+    for (let i = 0; i < 300; i++) game.executeNextTick();
     // Everything within the radius is done
     for (let y = 10; y < 50; y++) {
       for (let x = 50; x < 100; x++) {
@@ -155,6 +156,80 @@ describe("tall economy: integration backlog", () => {
         }
       }
     }
+  });
+
+  test("city integration falls off with distance", async () => {
+    const game = await spawnPhaseGame();
+    const a = human(game, "a");
+    conquerRect(game, a, 48, 48, 5, 5);
+    addCityLevels(game, a, 50, 50, 1); // radius 30, 100 budget per burst
+    game.endSpawnPhase();
+    conquerRect(game, a, 0, 0, 100, 100);
+    const integratedWithin = (lo: number, hi: number) => {
+      let done = 0;
+      let all = 0;
+      for (let y = 0; y < 100; y++) {
+        for (let x = 0; x < 100; x++) {
+          const d2 = (x - 50) ** 2 + (y - 50) ** 2;
+          if (d2 <= lo * lo || d2 > hi * hi) continue;
+          all++;
+          if (!game.isUnintegrated(game.ref(x, y))) done++;
+        }
+      }
+      return done / all;
+    };
+
+    // No PlayerExecution: only the city integrates, one burst per 10 ticks.
+    for (let i = 0; i < 60; i++) {
+      game.executeNextTick();
+      integrateNearCities(game, a);
+    }
+    // Six bursts (600 budget) finish the ring within 10 tiles...
+    expect(integratedWithin(0, 10)).toBe(1);
+    // ...where a flat cost of 1 would have reached ~14 tiles out.
+    expect(integratedWithin(13, 30)).toBe(0);
+
+    for (let i = 0; i < 600; i++) {
+      game.executeNextTick();
+      integrateNearCities(game, a);
+    }
+    // Sixty bursts: the inner 20 tiles are done, the outer edge barely begun.
+    expect(integratedWithin(0, 20)).toBe(1);
+    expect(integratedWithin(25, 30)).toBeLessThan(0.25);
+  });
+
+  test("land cut off from the main territory integrates slower", async () => {
+    const game = await spawnPhaseGame();
+    const linked = human(game, "linked");
+    const landed = human(game, "landed");
+    conquerRect(game, linked, 0, 0, 20, 20);
+    conquerRect(game, landed, 0, 50, 20, 20);
+    game.endSpawnPhase();
+    game.addExecution(new PlayerExecution(linked));
+    game.addExecution(new PlayerExecution(landed));
+    // Past the executions' first (staggered) cluster check.
+    for (let i = 0; i < 25; i++) game.executeNextTick();
+    conquerRect(game, linked, 20, 0, 15, 15); // touches the home land
+    conquerRect(game, landed, 30, 50, 15, 15); // a boat landing
+    for (let i = 0; i < 60; i++) game.executeNextTick();
+
+    expect(game.isDetached(game.ref(44, 64))).toBe(true);
+    expect(game.isDetached(game.ref(34, 14))).toBe(false);
+    // 5 a tick for both until the pocket is flagged, then 1 a tick there.
+    expect(linked.unintegratedTiles()).toBe(0);
+    expect(landed.unintegratedTiles()).toBeGreaterThan(50);
+
+    // Joining it back up makes it count as connected again.
+    const backlog = landed.unintegratedTiles();
+    conquerRect(game, landed, 20, 50, 10, 1);
+    for (let i = 0; i < 25; i++) game.executeNextTick();
+    for (let x = 30; x < 45; x++) {
+      for (let y = 50; y < 65; y++) {
+        expect(game.isDetached(game.ref(x, y))).toBe(false);
+      }
+    }
+    // Faster than the 1 a tick it got while detached.
+    expect(backlog + 10 - landed.unintegratedTiles()).toBeGreaterThan(40);
   });
 
   test("cities only integrate their owner's land", async () => {

@@ -3,6 +3,7 @@ import { Config } from "./configuration/Config";
 import { DoomsdayClockExecution } from "./execution/DoomsdayClockExecution";
 import { EarthquakeExecution } from "./execution/EarthquakeExecution";
 import { Executor } from "./execution/ExecutionManager";
+import { RebellionExecution } from "./execution/RebellionExecution";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
@@ -186,6 +187,7 @@ export class GameRunner {
       );
     }
     this.game.addExecution(new WinCheckExecution());
+    this.game.addExecution(new RebellionExecution(this.execManager.gameID()));
     if (this.game.config().doomsdayClockConfig().enabled) {
       this.game.addExecution(new DoomsdayClockExecution());
     }
