@@ -573,6 +573,7 @@
     "mercenaries_left": "Mercenary contract ended: {troops} unspent troops left",
     "missile_intercepted": "SAM intercepted {unit}",
     "no_boats_available": "No boats available, max {max}",
+    "rebellion": "{name} rebelled and declared independence",
     "received_gold_from_captured_ship": "Received {gold} gold from ship captured from {name}",
     "received_gold_from_conquest": "Conquered {name}, received {gold} gold",
     "received_gold_from_player": "Received {gold} gold from {name}",

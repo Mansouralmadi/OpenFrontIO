@@ -641,7 +641,12 @@ export interface Player {
   numTilesOwned(): number;
   /** Tall economy: tiles taken but not yet integrated (see Config.economicTiles). */
   unintegratedTiles(): number;
-  integrateTiles(count: number): void;
+  /** Integrates the oldest backlog tiles; detached tiles cost more of the budget. */
+  integrateTiles(budget: number): void;
+  /** Absolute position just past the last integration queue entry ever pushed. */
+  integrationQueueEnd(): number;
+  /** Live integration queue entries (may be stale), oldest first, with absolute positions. */
+  forEachIntegrationEntry(fn: (tile: TileRef, index: number) => void): void;
   /** Integrates one owned, unintegrated tile out of queue order (cities). */
   integrateTile(tile: TileRef): boolean;
   /** Tall economy: tiles administered at full value, from built city levels. */

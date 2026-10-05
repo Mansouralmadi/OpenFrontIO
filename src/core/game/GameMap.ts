@@ -41,6 +41,11 @@ export interface GameMap {
   // Owned land taken after spawn that its owner hasn't integrated yet.
   isUnintegrated(ref: TileRef): boolean;
   setUnintegrated(ref: TileRef, value: boolean): void;
+  // Unintegrated land cut off from its owner's main territory (integrates
+  // slower). Only meaningful while the tile is unintegrated; setUnintegrated
+  // clears it.
+  isDetached(ref: TileRef): boolean;
+  setDetached(ref: TileRef, value: boolean): void;
   isOnEdgeOfMap(ref: TileRef): boolean;
   isBorder(ref: TileRef): boolean;
   neighbors(ref: TileRef): TileRef[];
@@ -103,6 +108,7 @@ export interface GameMap {
    *
    * The bit layout of each `uint16` matches the renderer's tile state:
    *   bits  0-11: ownerID
+   *   bit   12:  detached (unintegrated land cut off from the main territory)
    *   bit   13:  fallout
    *   bit   14:  defense bonus
    */
@@ -139,6 +145,7 @@ export class GameMapImpl implements GameMap {
 
   // State bits (Uint16Array)
   private static readonly PLAYER_ID_MASK = 0xfff;
+  private static readonly DETACHED_BIT = 12;
   private static readonly FALLOUT_BIT = 13;
   private static readonly DEFENSE_BONUS_BIT = 14;
   private static readonly UNINTEGRATED_BIT = 15;
@@ -346,8 +353,18 @@ export class GameMapImpl implements GameMap {
   }
 
   setUnintegrated(ref: TileRef, value: boolean): void {
+    this.state[ref] &= ~(1 << GameMapImpl.DETACHED_BIT);
     if (value) this.state[ref] |= 1 << GameMapImpl.UNINTEGRATED_BIT;
     else this.state[ref] &= ~(1 << GameMapImpl.UNINTEGRATED_BIT);
+  }
+
+  isDetached(ref: TileRef): boolean {
+    return Boolean(this.state[ref] & (1 << GameMapImpl.DETACHED_BIT));
+  }
+
+  setDetached(ref: TileRef, value: boolean): void {
+    if (value) this.state[ref] |= 1 << GameMapImpl.DETACHED_BIT;
+    else this.state[ref] &= ~(1 << GameMapImpl.DETACHED_BIT);
   }
 
   // True when the tile touches the map boundary or an impassable tile.
@@ -642,7 +659,8 @@ export class GameMapImpl implements GameMap {
   }
 
   /**
-   * Terrain as a diff against the map file, plus fallout and defense bits.
+   * Terrain as a diff against the map file, plus fallout, defense,
+   * unintegrated and detached bits.
    * Owner bits are not stored: every player's ordered tile list already says
    * who owns what, and restore writes them from there.
    */
@@ -651,6 +669,8 @@ export class GameMapImpl implements GameMap {
     const fallout: TileRef[] = [];
     const defense: TileRef[] = [];
     const unintegrated: TileRef[] = [];
+    const detached: TileRef[] = [];
+    const detachedMask = 1 << GameMapImpl.DETACHED_BIT;
     const falloutMask = 1 << GameMapImpl.FALLOUT_BIT;
     const defenseMask = 1 << GameMapImpl.DEFENSE_BONUS_BIT;
     const unintegratedMask = 1 << GameMapImpl.UNINTEGRATED_BIT;
@@ -660,6 +680,7 @@ export class GameMapImpl implements GameMap {
       if (v & falloutMask) fallout.push(i);
       if (v & defenseMask) defense.push(i);
       if (v & unintegratedMask) unintegrated.push(i);
+      if (v & detachedMask) detached.push(i);
     }
     return {
       width: this.width_,
@@ -671,6 +692,7 @@ export class GameMapImpl implements GameMap {
       fallout: Uint32Array.from(fallout),
       defense: Uint32Array.from(defense),
       unintegrated: Uint32Array.from(unintegrated),
+      detached: Uint32Array.from(detached),
       numLandTiles: this.numLandTiles_,
       waterVersion: this.waterVersion_,
       numTilesWithFallout: this._numTilesWithFallout,
@@ -707,6 +729,9 @@ export class GameMapImpl implements GameMap {
     for (const ref of s.unintegrated) {
       this.state[ref] |= 1 << GameMapImpl.UNINTEGRATED_BIT;
     }
+    for (const ref of s.detached) {
+      this.state[ref] |= 1 << GameMapImpl.DETACHED_BIT;
+    }
     this.numLandTiles_ = s.numLandTiles;
     this.waterVersion_ = s.waterVersion;
     this._numTilesWithFallout = s.numTilesWithFallout;
@@ -715,10 +740,12 @@ export class GameMapImpl implements GameMap {
 
 export const GameMapSnapshot = snapshotType({
   name: "GameMap",
-  version: 2,
+  version: 3,
   migrations: {
     // v2: tall economy unintegrated-land bit; older games had none.
     1: (d) => ({ ...d, unintegrated: new Uint32Array(0) }),
+    // v3: detached-land bit; recomputed at the next cluster check.
+    2: (d) => ({ ...d, detached: new Uint32Array(0) }),
   },
   schema: z.object({
     width: zInt(),
@@ -730,6 +757,7 @@ export const GameMapSnapshot = snapshotType({
     fallout: zTiles(),
     defense: zTiles(),
     unintegrated: zTiles(),
+    detached: zTiles(),
     numLandTiles: zInt(),
     waterVersion: zInt(),
     numTilesWithFallout: zInt(),

@@ -134,6 +134,7 @@ export class PlayerExecution implements Execution {
         this.lastCalc = ticks;
         const start = performance.now();
         this.removeClusters();
+        if (this.player.unintegratedTiles() > 0) this.markDetached();
         const end = performance.now();
         if (end - start > 1000) {
           console.log(`player ${this.player.name()}, took ${end - start}ms`);
@@ -315,6 +316,57 @@ export class PlayerExecution implements Execution {
         this.removeCluster(cluster);
       }
     }
+  }
+
+  /**
+   * Flags each unintegrated tile not 4-connected through our territory to its
+   * largest piece as detached, so it integrates slower (boat landings, cut-off
+   * pockets). Two floods over our tiles, then one pass over the backlog.
+   */
+  private markDetached(): void {
+    const map = this.map;
+    const me = this.player.smallID();
+    const state = this.traversalState();
+    const visited = state.visited;
+    const stack = state.stack;
+    const nbuf = this.nbuf;
+    const flood = (start: TileRef, gen: number): number => {
+      let size = 1;
+      visited[start] = gen;
+      stack.length = 0;
+      stack.push(start);
+      while (stack.length > 0) {
+        const n = map.neighbors4(stack.pop()!, nbuf);
+        for (let i = 0; i < n; i++) {
+          const t = nbuf[i];
+          if (visited[t] === gen || map.ownerID(t) !== me) continue;
+          visited[t] = gen;
+          stack.push(t);
+          size++;
+        }
+      }
+      return size;
+    };
+
+    const sizeGen = this.bumpGeneration();
+    let main: TileRef = -1;
+    let mainSize = 0;
+    this.player.tiles().forEach((t) => {
+      if (visited[t] === sizeGen) return;
+      const size = flood(t, sizeGen);
+      if (size > mainSize) {
+        mainSize = size;
+        main = t;
+      }
+    });
+    if (main === -1) return;
+    const mainGen = this.bumpGeneration();
+    flood(main, mainGen);
+    this.player.forEachIntegrationEntry((t) => {
+      if (map.ownerID(t) === me && map.isUnintegrated(t)) {
+        this.mg.setDetached(t, visited[t] !== mainGen);
+      }
+    });
   }
 
   private checkAndAssignTerritory(

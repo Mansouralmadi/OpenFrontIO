@@ -2,6 +2,7 @@
  * Tile state bit layout (R16UI). Single source of truth for TypeScript + GLSL.
  *
  *   Bits 0-11:  ownerID (player smallID, 0 = unowned)
+ *   Bit 12:     detached (sim-only: unintegrated land cut off from its owner)
  *   Bit 13:     fallout
  *   Bit 14:     defense bonus
  *   Bit 15:     unintegrated (tall economy: taken but not yet integrated)

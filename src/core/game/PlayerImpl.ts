@@ -187,6 +187,8 @@ export class PlayerImpl implements Player {
    */
   public _integrationQueue: TileRef[] = [];
   private integrationHead = 0;
+  /** Entries dropped from the queue's front so far: queue[i] is entry base + i ever pushed. */
+  private integrationBase = 0;
 
   private _mercenaries = 0;
   private _mercenaryExpiresAt = 0;
@@ -671,21 +673,30 @@ export class PlayerImpl implements Player {
     );
   }
 
-  integrateTiles(count: number): void {
+  integrateTiles(budget: number): void {
     const q = this._integrationQueue;
-    while (count > 0 && this.integrationHead < q.length) {
-      const tile = q[this.integrationHead++];
+    // Detached land (cut off from the main territory) costs more budget per
+    // tile; the head waits for the next tick when it can't be afforded.
+    const detachedCost = this.mg.config().detachedIntegrationCost();
+    let spent = false;
+    while (budget > 0 && this.integrationHead < q.length) {
+      const tile = q[this.integrationHead];
       if (
         this.mg.ownerID(tile) === this.smallID() &&
         this.mg.isUnintegrated(tile)
       ) {
+        const cost = this.mg.isDetached(tile) ? detachedCost : 1;
+        if (cost > budget && spent) break;
         this.mg.setUnintegrated(tile, false);
         this._unintegratedTiles--;
-        count--;
+        budget -= cost;
+        spent = true;
       }
+      this.integrationHead++;
     }
     if (this.integrationHead === q.length) {
       // Every owned unintegrated tile has a queue entry, so none are left.
+      this.integrationBase += q.length;
       this._integrationQueue = [];
       this.integrationHead = 0;
       this._unintegratedTiles = 0;
@@ -693,8 +704,20 @@ export class PlayerImpl implements Player {
       this.integrationHead > 4096 &&
       this.integrationHead * 2 > q.length
     ) {
+      this.integrationBase += this.integrationHead;
       this._integrationQueue = q.slice(this.integrationHead);
       this.integrationHead = 0;
+    }
+  }
+
+  integrationQueueEnd(): number {
+    return this.integrationBase + this._integrationQueue.length;
+  }
+
+  forEachIntegrationEntry(fn: (tile: TileRef, index: number) => void): void {
+    const q = this._integrationQueue;
+    for (let i = this.integrationHead; i < q.length; i++) {
+      fn(q[i], this.integrationBase + i);
     }
   }
 
@@ -710,6 +733,7 @@ export class PlayerImpl implements Player {
     // Its queue entry stays and integrateTiles skips it later; once nothing
     // is left the queue holds only stale entries.
     if (this._unintegratedTiles === 0) {
+      this.integrationBase += this._integrationQueue.length;
       this._integrationQueue = [];
       this.integrationHead = 0;
     }
@@ -2148,6 +2172,7 @@ export class PlayerImpl implements Player {
       mercenaryHireTicks: [...this._mercenaryHireTicks],
       integrationQueue: w.tiles(this._integrationQueue),
       integrationHead: this.integrationHead,
+      integrationBase: this.integrationBase,
       borderTiles: w.tiles(this._borderTiles),
       units: this._units.map((u) => w.unit(u)),
       unitsVersion: this._myUnitsVersion,
@@ -2229,6 +2254,7 @@ export class PlayerImpl implements Player {
     this._mercenaryHireTicks = [...s.mercenaryHireTicks];
     this._integrationQueue = Array.from(s.integrationQueue);
     this.integrationHead = s.integrationHead;
+    this.integrationBase = s.integrationBase;
     this._borderTiles = new TileSet(s.borderTiles);
     this._units = s.units.map((u) => r.unit(u));
     this._myUnitsVersion = s.unitsVersion;
@@ -2277,7 +2303,7 @@ export class PlayerImpl implements Player {
 
 export const PlayerSnapshot = snapshotType({
   name: "Player",
-  version: 4,
+  version: 5,
   migrations: {
     // v2: tall economy integration backlog; older games had none.
     1: (d) => ({ ...d, unintegratedTiles: 0 }),
@@ -2296,6 +2322,8 @@ export const PlayerSnapshot = snapshotType({
       mercenaryExpiresAt: 0,
       mercenaryHireTicks: [],
     }),
+    // v5: absolute integration queue positions (rebellion timing).
+    4: (d) => ({ ...d, integrationBase: 0 }),
   },
   schema: z.object({
     smallID: zInt(),
@@ -2325,6 +2353,7 @@ export const PlayerSnapshot = snapshotType({
     unintegratedTiles: zInt(),
     integrationQueue: zTiles(),
     integrationHead: zInt(),
+    integrationBase: zInt(),
     mercenaries: zInt(),
     mercenaryExpiresAt: zInt(),
     mercenaryHireTicks: z.array(zInt()),
