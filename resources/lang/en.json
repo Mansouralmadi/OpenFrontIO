@@ -695,6 +695,24 @@
     "credits": "Credits",
     "title": "Game is Starting..."
   },
+  "game_summary": {
+    "boats_sent": "Boats",
+    "builds_note": "Structures built, warships and nukes launched during this game.",
+    "conquests": "Conquests",
+    "duration": "Game length: {time}",
+    "gold_earned": "Gold earned",
+    "map_end": "End",
+    "map_start": "Start",
+    "peak_tiles": "Peak",
+    "player": "Player",
+    "rebellions": "Rebellions",
+    "save_image": "Save image",
+    "tab_builds": "Builds & nukes",
+    "tab_mine": "Your stats",
+    "tab_overview": "Overview",
+    "tiles": "Tiles",
+    "troops": "Troops"
+  },
   "game_timer": {
     "one_minute_remaining": "One minute remaining!"
   },

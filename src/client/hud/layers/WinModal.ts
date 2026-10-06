@@ -11,12 +11,14 @@ import {
 import { EventBus } from "../../../core/EventBus";
 import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { AllPlayersStats } from "../../../core/Schemas";
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { Platform } from "../../Platform";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { SendWinnerEvent } from "../../Transport";
 import { GameView } from "../../view";
+import { GameSummaryTracker, SummaryResult } from "./GameSummary";
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Controller {
@@ -36,6 +38,9 @@ export class WinModal extends LitElement implements Controller {
 
   private _title: string;
 
+  private summary = new GameSummaryTracker();
+  @state() private summaryResult: SummaryResult | null = null;
+
   // Override to prevent shadow DOM creation
   createRenderRoot() {
     return this;
@@ -49,7 +54,7 @@ export class WinModal extends LitElement implements Controller {
     return html`
       <div
         class="${this.isVisible
-          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-4 md:p-6 shrink-0 rounded-lg z-[10010] shadow-2xl backdrop-blur-xs text-white w-[min(90vw,700px)] max-w-[90%] max-h-[90dvh] overflow-hidden flex flex-col"
+          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-4 md:p-6 shrink-0 rounded-lg z-[10010] shadow-2xl backdrop-blur-xs text-white w-[min(94vw,900px)] max-w-[90%] max-h-[90dvh] min-h-[min(90dvh,640px)] overflow-hidden flex flex-col"
           : "hidden"}"
       >
         <h2 class="m-0 mb-4 text-[26px] text-center text-white shrink-0">
@@ -92,14 +97,23 @@ export class WinModal extends LitElement implements Controller {
   }
 
   innerHtml() {
-    // New players who lost get the tutorial video; nothing else is promoted.
-    if (isInIframe() || this.isWin || getGamesPlayed() >= 3) return null;
-    return this.renderYoutubeTutorial();
+    return html`
+      <game-summary
+        .startMap=${this.summary.startMap}
+        .result=${this.summaryResult}
+      ></game-summary>
+      ${this.showTutorial() ? this.renderYoutubeTutorial() : null}
+    `;
+  }
+
+  // New players who lost get the tutorial video; nothing else is promoted.
+  private showTutorial(): boolean {
+    return !isInIframe() && !this.isWin && getGamesPlayed() < 3;
   }
 
   renderYoutubeTutorial() {
     return html`
-      <div class="text-center mb-6 bg-black/30 p-2.5 rounded-sm">
+      <div class="text-center mt-6 bg-black/30 p-2.5 rounded-sm">
         <h3 class="text-xl font-semibold text-white mb-3">
           ${translateText("win_modal.youtube_tutorial")}
         </h3>
@@ -125,8 +139,21 @@ export class WinModal extends LitElement implements Controller {
     `;
   }
 
-  show() {
+  show(allPlayersStats?: AllPlayersStats) {
     crazyGamesSDK.gameplayStop();
+    // The summary is decoration: it must never block the modal or the
+    // winner vote, so a failure just leaves it out.
+    try {
+      const myClientID = this.game.myClientID();
+      this.summaryResult = this.summary.finish(
+        this.game,
+        myClientID === undefined
+          ? null
+          : (allPlayersStats?.[myClientID] ?? null),
+      );
+    } catch (e) {
+      console.warn("game summary failed", e);
+    }
     this.isRankedGame =
       this.game.config().gameConfig().rankedType !== undefined;
     this.isVisible = true;
@@ -163,6 +190,11 @@ export class WinModal extends LitElement implements Controller {
   init() {}
 
   tick() {
+    try {
+      this.summary.tick(this.game);
+    } catch (e) {
+      console.warn("game summary tracking failed", e);
+    }
     const myPlayer = this.game.myPlayer();
     if (
       !this.hasShownDeathModal &&
@@ -187,7 +219,7 @@ export class WinModal extends LitElement implements Controller {
         this._title = translateText("win_modal.match_cancelled");
         this.isWin = false;
         history.replaceState(null, "", `${window.location.pathname}?replay`);
-        this.show();
+        this.show(wu.allPlayersStats);
       } else if (wu.winner[0] === "team") {
         this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
@@ -202,7 +234,7 @@ export class WinModal extends LitElement implements Controller {
         }
         this.playEndOfGameSound();
         history.replaceState(null, "", `${window.location.pathname}?replay`);
-        this.show();
+        this.show(wu.allPlayersStats);
       } else if (wu.winner[0] === "nation") {
         this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
         this._title = translateText("win_modal.nation_won", {
@@ -210,7 +242,7 @@ export class WinModal extends LitElement implements Controller {
         });
         this.isWin = false;
         this.playEndOfGameSound();
-        this.show();
+        this.show(wu.allPlayersStats);
       } else {
         const winner = this.game.playerByClientID(wu.winner[1]);
         if (!winner?.isPlayer()) return;
@@ -235,7 +267,7 @@ export class WinModal extends LitElement implements Controller {
         }
         this.playEndOfGameSound();
         history.replaceState(null, "", `${window.location.pathname}?replay`);
-        this.show();
+        this.show(wu.allPlayersStats);
       }
     });
   }
