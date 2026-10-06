@@ -333,6 +333,27 @@ describe("applyStateUpdate", () => {
     expect(target.deathPosition).toBe(3);
   });
 
+  it("applies the Iron fields: integration, mercenaries, happiness", () => {
+    // Happiness was once diffed and sent but never applied, so the HUD sat
+    // at 50 forever while the sim used the real value.
+    const target = makePlayerState();
+    applyStateUpdate(
+      target,
+      makePlayerUpdate({
+        unintegratedTiles: 321,
+        mercenaries: 1200,
+        mercenaryExpiresAt: 3000,
+        recentMercenaryHires: 2,
+        happiness: 23,
+      }),
+    );
+    expect(target.unintegratedTiles).toBe(321);
+    expect(target.mercenaries).toBe(1200);
+    expect(target.mercenaryExpiresAt).toBe(3000);
+    expect(target.recentMercenaryHires).toBe(2);
+    expect(target.happiness).toBe(23);
+  });
+
   it("applies every field from a full update", () => {
     const target = makePlayerState();
     const pu = makePlayerUpdate({

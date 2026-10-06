@@ -130,12 +130,11 @@ function perimeter(map: GameMap, tiles: TileRef[]): number {
 }
 
 describe("Land bomb", () => {
-  test("costs the same as the hydrogen bomb, sized like it", async () => {
+  test("costs 2.5M (half a hydrogen bomb), sized like a hydrogen bomb", async () => {
     const game = await setup("plains", { infiniteGold: false }, [A]);
     const a = game.player(A.id);
     const cost = (t: UnitType) => game.unitInfo(t).cost(game, a);
-    expect(cost(UnitType.LandBomb)).toBe(cost(UnitType.HydrogenBomb));
-    expect(cost(UnitType.LandBomb)).toBe(5_000_000n);
+    expect(cost(UnitType.LandBomb)).toBe(2_500_000n);
     expect(Config.prototype.nukeMagnitudes(UnitType.LandBomb)).toEqual(
       Config.prototype.nukeMagnitudes(UnitType.HydrogenBomb),
     );

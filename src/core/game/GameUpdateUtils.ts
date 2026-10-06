@@ -206,6 +206,7 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.recentMercenaryHires !== undefined) {
     target.recentMercenaryHires = pu.recentMercenaryHires;
   }
+  if (pu.happiness !== undefined) target.happiness = pu.happiness;
   if (pu.gold !== undefined) target.gold = Number(pu.gold);
   if (pu.tradeGold !== undefined) target.tradeGold = Number(pu.tradeGold);
   if (pu.trainGold !== undefined) target.trainGold = Number(pu.trainGold);

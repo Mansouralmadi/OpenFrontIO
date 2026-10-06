@@ -88,7 +88,7 @@ describe("WinCheckExecution", () => {
 });
 
 describe("WinCheckExecution - Nation Winners", () => {
-  test("should set Nation as winner when reaching 80% territory", async () => {
+  test("should set Nation as winner when reaching 60% territory", async () => {
     // Setup game
     const game = await setup("big_plains", {
       infiniteGold: true,
@@ -168,10 +168,10 @@ describe("WinCheckExecution - Nation Winners", () => {
 
     game.endSpawnPhase();
 
-    // Give Nation 60% territory (below 80% threshold)
+    // Give Nation 50% territory (below the 60% threshold)
     // Give human 30% territory
     const totalLand = game.numLandTiles();
-    const nationTiles = Math.ceil(totalLand * 0.6);
+    const nationTiles = Math.ceil(totalLand * 0.5);
     const humanTiles = Math.ceil(totalLand * 0.3);
     let nationAssigned = 0;
     let humanAssigned = 0;
@@ -315,7 +315,7 @@ describe("WinCheckExecution - Nation Winners", () => {
 
     // Skip spawn phase
 
-    // Assign 96% of land to bot team (above the 80% win threshold)
+    // Assign 96% of land to bot team (above the 60% win threshold)
     const totalLand = game.numLandTiles();
     const botTeamTiles = Math.ceil(totalLand * 0.96);
     let bot1Assigned = 0;
@@ -563,21 +563,21 @@ describe("WinCheckExecution - Overtime", () => {
       overtime: { enabled: true, startMinutes: 1 },
     });
     const config = game.config();
-    expect(config.percentageTilesOwnedToWin(0)).toBe(80);
+    expect(config.percentageTilesOwnedToWin(0)).toBe(60);
     // Unchanged up to and including the start minute.
-    expect(config.percentageTilesOwnedToWin(60)).toBe(80);
+    expect(config.percentageTilesOwnedToWin(60)).toBe(60);
     // Whole percentage points only: 2%/min -> one 1% step every 30 seconds.
-    expect(config.percentageTilesOwnedToWin(89)).toBe(80);
-    expect(config.percentageTilesOwnedToWin(90)).toBe(79);
-    expect(config.percentageTilesOwnedToWin(119)).toBe(79);
-    expect(config.percentageTilesOwnedToWin(60 + 5 * 60)).toBe(70);
+    expect(config.percentageTilesOwnedToWin(89)).toBe(60);
+    expect(config.percentageTilesOwnedToWin(90)).toBe(59);
+    expect(config.percentageTilesOwnedToWin(119)).toBe(59);
+    expect(config.percentageTilesOwnedToWin(60 + 5 * 60)).toBe(50);
     // No floor: clamps at 0 so the leader always qualifies eventually.
     expect(config.percentageTilesOwnedToWin(60 + 41 * 60)).toBe(0);
   });
 
   test("threshold never decays when the mode is off", async () => {
     const game = await setup("big_plains", { gameMode: GameMode.FFA });
-    expect(game.config().percentageTilesOwnedToWin(10_000)).toBe(80);
+    expect(game.config().percentageTilesOwnedToWin(10_000)).toBe(60);
   });
 
   test("team games use the same base and decay as FFA", async () => {
@@ -586,8 +586,8 @@ describe("WinCheckExecution - Overtime", () => {
       playerTeams: 2,
       overtime: { enabled: true, startMinutes: 1 },
     });
-    expect(game.config().percentageTilesOwnedToWin(0)).toBe(80);
-    expect(game.config().percentageTilesOwnedToWin(60 + 5 * 60)).toBe(70);
+    expect(game.config().percentageTilesOwnedToWin(0)).toBe(60);
+    expect(game.config().percentageTilesOwnedToWin(60 + 5 * 60)).toBe(50);
   });
 
   test("a null maxTimerValue is no timer, not a zero-minute one", async () => {
@@ -625,7 +625,7 @@ describe("WinCheckExecution - Overtime", () => {
       overtime: { enabled: true, startMinutes: 1 },
     });
 
-    // 79% of the land: under the 80% base, so no win until the bar shrinks.
+    // 59% of the land: under the 60% base, so no win until the bar shrinks.
     const nationInfo = new PlayerInfo(
       "TestNation",
       PlayerType.Nation,
@@ -635,7 +635,7 @@ describe("WinCheckExecution - Overtime", () => {
     game.addPlayer(nationInfo);
     const nation = game.player("nation_id");
     const totalLand = game.numLandTiles();
-    const targetTiles = Math.floor(totalLand * 0.79);
+    const targetTiles = Math.floor(totalLand * 0.59);
     let assigned = 0;
     game.map().forEachTile((tile) => {
       if (assigned >= targetTiles) return;
@@ -653,7 +653,7 @@ describe("WinCheckExecution - Overtime", () => {
     expect(setWinnerSpy).not.toHaveBeenCalled();
     expect(winCheck.isActive()).toBe(true);
 
-    // Two game-minutes in, the bar is 78% — below the nation's 79%.
+    // Two game-minutes in, the bar is 58% — below the nation's 59%.
     while (game.elapsedGameSeconds() < 120) {
       game.executeNextTick();
     }

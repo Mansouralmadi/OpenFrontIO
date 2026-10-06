@@ -297,7 +297,7 @@ const DOOMSDAY_CLOCK_DEFAULTS = {
 };
 
 // Share of the land a side must hold to win, in every game mode.
-const PERCENT_TILES_OWNED_TO_WIN = 80;
+const PERCENT_TILES_OWNED_TO_WIN = 60; // Iron: upstream is 80
 
 // Overtime tunables (anti-stalemate). Off unless enabled in GameConfig.
 // After startMinutes the percentage of tiles required to win falls from the
@@ -739,9 +739,13 @@ export class Config {
         };
         break;
       case UnitType.HydrogenBomb:
-      case UnitType.LandBomb: // same as the hydrogen bomb
         info = {
           cost: this.costWrapper(() => 5_000_000, UnitType.HydrogenBomb),
+        };
+        break;
+      case UnitType.LandBomb:
+        info = {
+          cost: this.costWrapper(() => 2_500_000, UnitType.LandBomb),
         };
         break;
       case UnitType.MIRV:
