@@ -452,6 +452,7 @@ export class BuildPreviewController implements Controller {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
       case UnitType.AntimatterBomb:
+      case UnitType.LandBomb:
         rangeRadius = this.game
           .config()
           .nukeMagnitudes(u.type, this.game).outer;

@@ -31,6 +31,7 @@ const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
 const antimatterBombIcon = assetUrl("images/AntimatterBombIcon.svg");
+const landBombIcon = assetUrl("images/LandBombIcon.svg");
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
 const mirvIcon = assetUrl("images/MIRVIcon.svg");
 const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
@@ -76,6 +77,13 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: antimatterBombIcon,
       description: "build_menu.desc.antimatter_bomb",
       key: "unit_type.antimatter_bomb",
+      countable: false,
+    },
+    {
+      unitType: UnitType.LandBomb,
+      icon: landBombIcon,
+      description: "build_menu.desc.land_bomb",
+      key: "unit_type.land_bomb",
       countable: false,
     },
     {

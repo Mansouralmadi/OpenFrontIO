@@ -700,6 +700,7 @@ export class Config {
         };
         break;
       case UnitType.HydrogenBomb:
+      case UnitType.LandBomb: // same as the hydrogen bomb
         info = {
           cost: this.costWrapper(() => 5_000_000, UnitType.HydrogenBomb),
         };
@@ -1324,6 +1325,7 @@ export class Config {
       case UnitType.AtomBomb:
         return { inner: 12, outer: 30 };
       case UnitType.HydrogenBomb:
+      case UnitType.LandBomb: // same as the hydrogen bomb
         return { inner: 80, outer: 100 };
     }
     throw new Error(`Unknown nuke type: ${unitType}`);
@@ -1338,6 +1340,7 @@ export class Config {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
       case UnitType.AntimatterBomb:
+      case UnitType.LandBomb: // same as the hydrogen bomb
         return 10;
       case UnitType.MIRV:
         return 15;

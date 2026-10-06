@@ -122,6 +122,7 @@ const unitOptions: { type: UnitType; translationKey: string }[] = [
     type: UnitType.AntimatterBomb,
     translationKey: "unit_type.antimatter_bomb",
   },
+  { type: UnitType.LandBomb, translationKey: "unit_type.land_bomb" },
   { type: UnitType.Factory, translationKey: "unit_type.factory" },
 ];
 

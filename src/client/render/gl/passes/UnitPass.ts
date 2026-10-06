@@ -41,6 +41,7 @@ import {
   UT_ANTIMATTER_BOMB,
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
+  UT_LAND_BOMB,
   UT_MIRV,
   UT_MIRV_WARHEAD,
   UT_SAM_MISSILE,
@@ -134,6 +135,7 @@ const FLICKER_TYPES: ReadonlySet<string> = new Set([
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
   UT_ANTIMATTER_BOMB,
+  UT_LAND_BOMB,
   UT_MIRV,
   UT_MIRV_WARHEAD,
   UT_SAM_MISSILE,
@@ -146,6 +148,7 @@ const MISSILE_TYPES: ReadonlySet<string> = new Set([
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
   UT_ANTIMATTER_BOMB,
+  UT_LAND_BOMB,
   UT_MIRV,
   UT_SAM_MISSILE,
   UT_SHELL,
@@ -291,6 +294,8 @@ export class UnitPass {
     }
     // No dedicated sprite: the antimatter bomb flies as a (glowing) hydrogen bomb.
     this.typeToAtlasCol.set(UT_ANTIMATTER_BOMB, HYDROGEN_BOMB_COL);
+    // ...and the land bomb as an atom bomb.
+    this.typeToAtlasCol.set(UT_LAND_BOMB, UNIT_ORDER.indexOf(UT_ATOM_BOMB));
 
     // Compile shaders
     this.program = createProgram(

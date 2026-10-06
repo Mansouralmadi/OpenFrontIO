@@ -30,6 +30,7 @@ const SPRITE_CONFIG: Partial<Record<UnitType | TrainTypeSprite, string>> = {
   [UnitType.AtomBomb]: atomBombSprite,
   [UnitType.HydrogenBomb]: hydrogenBombSprite,
   [UnitType.AntimatterBomb]: hydrogenBombSprite,
+  [UnitType.LandBomb]: atomBombSprite,
   [UnitType.TradeShip]: tradeShipSprite,
   [UnitType.MIRV]: mirvSprite,
   [TrainTypeSprite.Engine]: trainEngineSprite,

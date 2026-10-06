@@ -270,6 +270,7 @@ class SAMTargetingSystem {
         UnitType.AtomBomb,
         UnitType.HydrogenBomb,
         UnitType.AntimatterBomb,
+        UnitType.LandBomb,
         UnitType.MIRVWarhead,
       ],
       this.isTargetableNearbyUnit,
@@ -398,6 +399,7 @@ export class SAMLauncherExecution implements Execution {
       this.mg.unitCount(UnitType.AtomBomb) === 0 &&
       this.mg.unitCount(UnitType.HydrogenBomb) === 0 &&
       this.mg.unitCount(UnitType.AntimatterBomb) === 0 &&
+      this.mg.unitCount(UnitType.LandBomb) === 0 &&
       this.mg.unitCount(UnitType.MIRVWarhead) === 0
     ) {
       return;

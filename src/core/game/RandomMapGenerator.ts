@@ -65,7 +65,7 @@ const BUCKETS = 4096;
 
 // ---------- noise ----------
 
-function hash(ix: number, iy: number, seed: number): number {
+export function hash(ix: number, iy: number, seed: number): number {
   let h = Math.imul(ix, 0x27d4eb2d) ^ Math.imul(iy, 0x165667b1) ^ seed;
   h = Math.imul(h ^ (h >>> 15), 0x85ebca6b);
   h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
@@ -106,7 +106,7 @@ const ROT_S = 0.4848096;
  * Unnormalised sum of octaves [from, to) of fractal noise. Splitting lets
  * smooth low octaves be sampled coarsely and only fine octaves per tile.
  */
-function fbmPart(
+export function fbmPart(
   x: number,
   y: number,
   seed: number,
@@ -127,14 +127,14 @@ function fbmPart(
 }
 
 /** Sum of octave amplitudes, to normalise fbmPart sums. */
-function fbmNorm(octaves: number, persistence: number): number {
+export function fbmNorm(octaves: number, persistence: number): number {
   let norm = 0;
   for (let i = 0, amp = 1; i < octaves; i++, amp *= persistence) norm += amp;
   return norm;
 }
 
 /** Fractal noise, roughly in [0, 1]. */
-function fbm(
+export function fbm(
   x: number,
   y: number,
   seed: number,
@@ -187,7 +187,7 @@ function bilerp({ g, gw, step }: Grid, x: number, y: number): number {
  * fn(x/height, y/height) sampled every `step` tiles, bilinear in between.
  * For low-frequency fields where per-tile evaluation is wasted work.
  */
-function coarseField(
+export function coarseField(
   w: number,
   h: number,
   step: number,
@@ -208,7 +208,7 @@ function sampleGrid(v: Float32Array, w: number, h: number, step: number) {
 }
 
 /** Value with `below` cells under it (histogram approximation). */
-function percentile(
+export function percentile(
   v: Float32Array,
   below: number,
   min: number,
@@ -446,24 +446,16 @@ export function generateTerrain(
   // smooth beaches with broken, rocky coast (Here Dragons Abound).
   {
     const sea = percentile(elev, n - wantLand, min, max);
-    const band = 0.08 * (max - min);
-    const roughness = coarseField(width, height, 16, (nx, ny) =>
-      clamp01(0.5 + 2.5 * (fbm(nx * 3.3, ny * 3.3, s + 61, 2) - 0.5)),
+    // 25px features (at 1000px) down to ~1.5px
+    addCoastDetail(
+      elev,
+      width,
+      height,
+      sea,
+      0.08 * (max - min),
+      s,
+      height / 40,
     );
-    const f = height / 40; // 25px features (at 1000px) down to ~1.5px
-    // Fewer octaves at low resolution (previews), or they alias into speckle.
-    let coastOctaves = 1;
-    for (let g = f / 2; coastOctaves < 5 && g >= 1.5; g /= 2) coastOctaves++;
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const i = y * width + x;
-        const d = (elev[i] - sea) / band;
-        if (d * d >= 1) continue;
-        const r = 0.25 + 0.75 * roughness(x, y);
-        const detail = fbm(x / f, y / f, s + 53, coastOctaves, 0.6) - 0.5;
-        elev[i] += (1 - d * d) * r * 1.6 * band * detail;
-      }
-    }
     [min, max] = range(elev);
   }
 
@@ -576,7 +568,40 @@ export function generateTerrain(
   return { width, height, type, mag };
 }
 
-function clamp01(v: number): number {
+/**
+ * Adds fine noise (features of `f` tiles and finer) to `elev` only within
+ * `band` of the `sea` level, so coasts get bays and headlands while the
+ * macro shape stays put. A regional roughness field mixes smooth beaches
+ * with broken, rocky coast.
+ */
+export function addCoastDetail(
+  elev: Float32Array,
+  width: number,
+  height: number,
+  sea: number,
+  band: number,
+  s: number,
+  f: number,
+): void {
+  const roughness = coarseField(width, height, 16, (nx, ny) =>
+    clamp01(0.5 + 2.5 * (fbm(nx * 3.3, ny * 3.3, s + 61, 2) - 0.5)),
+  );
+  // Fewer octaves at low resolution (previews), or they alias into speckle.
+  let coastOctaves = 1;
+  for (let g = f / 2; coastOctaves < 5 && g >= 1.5; g /= 2) coastOctaves++;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = y * width + x;
+      const d = (elev[i] - sea) / band;
+      if (d * d >= 1) continue;
+      const r = 0.25 + 0.75 * roughness(x, y);
+      const detail = fbm(x / f, y / f, s + 53, coastOctaves, 0.6) - 0.5;
+      elev[i] += (1 - d * d) * r * 1.6 * band * detail;
+    }
+  }
+}
+
+export function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;
 }
 
@@ -924,7 +949,7 @@ function neighbors(i: number, w: number, n: number): number[] {
 }
 
 /** Connected components (4-neighbour) of tiles equal to `want`. */
-function components(
+export function components(
   t: RawTerrain,
   want: number,
 ): { label: Int32Array; sizes: number[] } {

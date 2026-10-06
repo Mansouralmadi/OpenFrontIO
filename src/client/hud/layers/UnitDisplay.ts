@@ -22,6 +22,7 @@ import {
   factoryIcon,
   goldCoinIcon,
   hydrogenBombIcon,
+  landBombIcon,
   mirvIcon,
   missileSiloIcon,
   portIcon,
@@ -97,6 +98,7 @@ export class UnitDisplay extends LitElement implements Controller {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
       case UnitType.AntimatterBomb:
+      case UnitType.LandBomb:
       case UnitType.MIRV:
         return (
           this.cost(item) <= (player?.gold() ?? 0n) &&
@@ -222,6 +224,13 @@ export class UnitDisplay extends LitElement implements Controller {
             "antimatter_bomb",
             "",
           )}
+          ${this.renderUnitItem(
+            landBombIcon,
+            null,
+            UnitType.LandBomb,
+            "land_bomb",
+            "",
+          )}
         </div>
       </div>
     `;
@@ -305,6 +314,7 @@ export class UnitDisplay extends LitElement implements Controller {
               case UnitType.AtomBomb:
               case UnitType.HydrogenBomb:
               case UnitType.AntimatterBomb:
+              case UnitType.LandBomb:
                 this.eventBus?.emit(
                   new ToggleStructureEvent([
                     UnitType.MissileSilo,
