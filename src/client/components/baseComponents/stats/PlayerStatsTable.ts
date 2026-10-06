@@ -35,7 +35,7 @@ const buildingUnits = (
 // from `unit_type.*` rather than a parallel copy. Trade ships, transports and
 // MIRV warheads are stats-only rows and keep their own keys. `satisfies` fails
 // compilation if a new stat unit lands without a label.
-const UNIT_LABEL_KEYS = {
+export const UNIT_LABEL_KEYS = {
   city: "unit_type.city",
   defp: "unit_type.defense_post",
   fact: "unit_type.factory",

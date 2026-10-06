@@ -56,11 +56,27 @@ function makeGame(opts: {
       hasSpawned: () => true,
       team: () => opts.myTeam ?? null,
       clientID: () => opts.myClientID ?? null,
+      smallID: () => 1,
+      displayName: () => "me",
+      territoryColor: () => ({ toHex: () => "#000000" }),
+      numTilesOwned: () => 0,
+      troops: () => 0,
+      goldEarned: () => 0,
     }),
     inSpawnPhase: () => false,
     updatesSinceLastTick: () => ({ [GameUpdateType.Win]: [winUpdate] }),
     playerByClientID: () => opts.winnerPlayer,
     config: () => ({ gameConfig: () => ({ rankedType: undefined }) }),
+    // End-of-game summary (GameSummaryTracker): a 1x1 unowned world.
+    players: () => [],
+    myClientID: () => opts.myClientID,
+    width: () => 1,
+    height: () => 1,
+    ref: () => 0,
+    terrainByte: () => 0,
+    hasOwner: () => false,
+    numLandTiles: () => 0,
+    elapsedGameSeconds: () => 0,
   } as unknown as GameView;
 }
 
