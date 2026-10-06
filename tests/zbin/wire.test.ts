@@ -87,6 +87,15 @@ const SAMPLE_INTENTS: StampedIntent[] = [
     amount: 3,
   },
   {
+    type: "build_unit",
+    clientID: P1,
+    unit: UnitType.AtomBomb,
+    tile: 4242,
+    rocketDirectionUp: false,
+    amount: 2,
+    silo: 1234,
+  },
+  {
     type: "upgrade_structure",
     clientID: P2,
     unit: UnitType.City,

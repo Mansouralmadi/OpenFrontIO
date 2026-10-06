@@ -72,6 +72,15 @@ describe("structure and missile execution snapshots", () => {
         false,
         2,
       ),
+      // Player-chosen launch silo (id need not exist yet).
+      new ConstructionExecution(
+        a,
+        UnitType.HydrogenBomb,
+        game.ref(80, 25),
+        true,
+        undefined,
+        9999,
+      ),
     );
     await expectSnapshotRoundTrip(game, BIG, 80);
   });
@@ -82,7 +91,7 @@ describe("structure and missile execution snapshots", () => {
     conquerRect(game, b, 50, 50, 120, 120);
     a.buildUnit(UnitType.MissileSilo, game.ref(10, 10), {});
     a.buildUnit(UnitType.MissileSilo, game.ref(20, 20), {});
-    a.buildUnit(UnitType.MissileSilo, game.ref(25, 5), {});
+    const chosen = a.buildUnit(UnitType.MissileSilo, game.ref(25, 5), {});
     game.addExecution(
       new NukeExecution(UnitType.AtomBomb, a, game.ref(80, 80)),
       new NukeExecution(UnitType.HydrogenBomb, a, game.ref(100, 60)),
@@ -101,6 +110,17 @@ describe("structure and missile execution snapshots", () => {
     expect(a.units(UnitType.HydrogenBomb).length).toBe(1);
     game.addExecution(
       new NukeExecution(UnitType.AtomBomb, a, game.ref(60, 60), game.ref(5, 5)),
+      // Pending launch from a player-chosen silo.
+      new NukeExecution(
+        UnitType.AtomBomb,
+        a,
+        game.ref(90, 70),
+        null,
+        -1,
+        0,
+        true,
+        chosen.id(),
+      ),
     );
     await expectSnapshotRoundTrip(game, BIG, 120);
   });

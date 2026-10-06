@@ -7,6 +7,7 @@ import { BuildPreviewController } from "../controllers/BuildPreviewController";
 import { HoverHighlightController } from "../controllers/HoverHighlightController";
 import { LiveStatsController } from "../controllers/LiveStatsController";
 import { MapLayerController } from "../controllers/MapLayerController";
+import { SiloSelectionController } from "../controllers/SiloSelectionController";
 import { SoundEffectController } from "../controllers/SoundEffectController";
 import { StructureHighlightController } from "../controllers/StructureHighlightController";
 import { ViewModeController } from "../controllers/ViewModeController";
@@ -308,6 +309,7 @@ export function createRenderer(
 
   const layers: Controller[] = [
     new WarshipSelectionController(game, eventBus, transformHandler, view),
+    new SiloSelectionController(game, eventBus, uiState, transformHandler),
     new BuildPreviewController(
       game,
       eventBus,

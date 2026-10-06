@@ -39,6 +39,7 @@ import {
 import { simpleHash } from "../Util";
 import { DistanceBasedBezierCurve } from "../utilities/Line";
 import { NukeExecution } from "./NukeExecution";
+import { reportSiloLaunchFailure } from "./Util";
 
 export class MirvExecution implements Execution {
   private active = true;
@@ -80,6 +81,8 @@ export class MirvExecution implements Execution {
   constructor(
     private player: Player,
     private dst: TileRef,
+    // Player-chosen launch silo (unit id); unset = nearest ready silo.
+    private silo?: number,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -93,8 +96,16 @@ export class MirvExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.nuke === null) {
-      const spawn = this.player.canBuild(UnitType.MIRV, this.dst);
+      const spawn = this.player.canBuild(
+        UnitType.MIRV,
+        this.dst,
+        null,
+        this.silo,
+      );
       if (spawn === false) {
+        if (this.silo !== undefined) {
+          reportSiloLaunchFailure(this.mg, this.player, this.silo);
+        }
         console.warn(`cannot build MIRV`);
         this.active = false;
         return;
@@ -397,6 +408,7 @@ export class MirvExecution implements Execution {
       active: this.active,
       player: w.player(this.player),
       dst: this.dst,
+      silo: this.silo,
       range: this.range,
       rangeSquared: this.rangeSquared,
       minimumSpread: this.minimumSpread,
@@ -433,6 +445,7 @@ export class MirvExecution implements Execution {
     this.active = s.active;
     this.player = r.player(s.player);
     this.dst = s.dst;
+    this.silo = s.silo;
     this.range = s.range;
     this.rangeSquared = s.rangeSquared;
     this.minimumSpread = s.minimumSpread;
@@ -465,6 +478,7 @@ const MirvStateSchema = z.object({
   active: z.boolean(),
   player: zPlayerRef(),
   dst: zTile(),
+  silo: zInt().optional(),
   range: zInt(),
   rangeSquared: zInt(),
   minimumSpread: zInt(),

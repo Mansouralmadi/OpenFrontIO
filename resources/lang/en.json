@@ -594,6 +594,8 @@
     "sent_emoji": "Sent {name}: {emoji}",
     "sent_gold_to_player": "Sent {gold} gold to {name}",
     "sent_troops_to_player": "Sent {troops} troops to {name}",
+    "silo_launch_failed_lost": "Launch failed: your selected missile silo was destroyed or captured",
+    "silo_launch_failed_reloading": "Launch failed: your selected missile silo is still reloading",
     "trade_ship_captured": "Your trade ship was captured by {name}",
     "unit_destroyed": "Your {unit} was destroyed",
     "unit_voluntarily_deleted": "Unit voluntarily deleted",
@@ -1584,6 +1586,12 @@
     "available_tooltip": "Your current available troops",
     "capacity_note": "Receiver can accept only {amount} right now.",
     "title_with_name": "Send Troops to {name}"
+  },
+  "silo_select": {
+    "clear": "Clear selected silo (Esc)",
+    "launching_from": "Launching from: silo at ({x}, {y})",
+    "lost": "Destroyed or captured: nukes will not launch",
+    "reloading": "Reloading: nukes will not launch until it is ready"
   },
   "single_modal": {
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",

@@ -746,6 +746,8 @@ export interface Player {
     type: UnitType,
     targetTile: TileRef,
     validTiles?: TileRef[] | null,
+    // Nukes only: launch from this silo (unit id) instead of the nearest.
+    silo?: number,
   ): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,

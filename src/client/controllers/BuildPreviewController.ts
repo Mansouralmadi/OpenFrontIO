@@ -10,6 +10,7 @@
 import { EventBus } from "../../core/EventBus";
 import {
   listNukeBreakAlliance,
+  siloLaunchBlocker,
   wouldNukeBreakAlliance,
 } from "../../core/execution/Util";
 import {
@@ -36,7 +37,8 @@ import {
   SendUpgradeStructureIntentEvent,
 } from "../Transport";
 import { UIState } from "../UIState";
-import { GameView } from "../view";
+import { GameView, UnitView } from "../view";
+import { launchSiloFor } from "./SiloSelectionController";
 
 /** True for silo nukes: ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
 export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
@@ -94,6 +96,8 @@ export class BuildPreviewController implements Controller {
     srcY: number;
     directionUp: boolean;
     sams: SAMInfo[];
+    // The player-chosen silo can't fire: flag the launch as blocked.
+    siloBlocked: boolean;
   } | null = null;
 
   constructor(
@@ -164,8 +168,9 @@ export class BuildPreviewController implements Controller {
           const tx = Math.floor(w.x);
           const ty = Math.floor(w.y);
           if (
-            this.game.isValidCoord(tx, ty) &&
-            this.game.isImpassable(this.game.ref(tx, ty))
+            traj.siloBlocked ||
+            (this.game.isValidCoord(tx, ty) &&
+              this.game.isImpassable(this.game.ref(tx, ty)))
           ) {
             data.tSamIntercept = Math.min(data.tSamIntercept, T_BLOCKED_DST);
           }
@@ -335,32 +340,47 @@ export class BuildPreviewController implements Controller {
       return;
     }
 
-    // Mirror PlayerImpl.nukeSpawn (the source NukeExecution actually fires
-    // from): only silos that are active, not reloading, and not under
-    // construction are eligible, and the nearest (Manhattan distance) is
-    // chosen. Keeping these in sync prevents the preview arc from
-    // originating from a silo the game wouldn't use.
-    const silos = myPlayer
-      .units(UnitType.MissileSilo)
-      .filter(
-        (u) => u.isActive() && !u.isInCooldown() && !u.isUnderConstruction(),
+    // A player-chosen silo is the only possible source: the sim fires from it
+    // or refuses (never falls back), so draw from it, marked blocked when it
+    // can't fire right now.
+    const chosenId = launchSiloFor(this.uiState, type);
+    let bestSilo: UnitView;
+    let siloBlocked = false;
+    if (chosenId !== undefined) {
+      const chosen = this.game.unit(chosenId);
+      if (chosen === undefined || !chosen.isActive()) {
+        this.clearNukeTrajectory();
+        return;
+      }
+      bestSilo = chosen;
+      siloBlocked = siloLaunchBlocker(chosen, myPlayer.id()) !== null;
+    } else {
+      // Mirror PlayerImpl.nukeSpawn (the source NukeExecution actually fires
+      // from): only silos that are active, not reloading, and not under
+      // construction are eligible, and the nearest (Manhattan distance) is
+      // chosen. Keeping these in sync prevents the preview arc from
+      // originating from a silo the game wouldn't use.
+      const silos = myPlayer
+        .units(UnitType.MissileSilo)
+        .filter(
+          (u) => u.isActive() && !u.isInCooldown() && !u.isUnderConstruction(),
+        );
+      if (silos.length === 0) {
+        this.clearNukeTrajectory();
+        return;
+      }
+
+      const dstX = this.game.x(tileRef);
+      const dstY = this.game.y(tileRef);
+      silos.sort(
+        (a, b) =>
+          Math.abs(this.game.x(a.tile()) - dstX) +
+          Math.abs(this.game.y(a.tile()) - dstY) -
+          (Math.abs(this.game.x(b.tile()) - dstX) +
+            Math.abs(this.game.y(b.tile()) - dstY)),
       );
-    if (silos.length === 0) {
-      this.clearNukeTrajectory();
-      return;
+      bestSilo = silos[0];
     }
-
-    const dstX = this.game.x(tileRef);
-    const dstY = this.game.y(tileRef);
-    silos.sort(
-      (a, b) =>
-        Math.abs(this.game.x(a.tile()) - dstX) +
-        Math.abs(this.game.y(a.tile()) - dstY) -
-        (Math.abs(this.game.x(b.tile()) - dstX) +
-          Math.abs(this.game.y(b.tile()) - dstY)),
-    );
-
-    const bestSilo = silos[0];
     const directionUp = this.uiState.rocketDirectionUp;
     const srcX = this.game.x(bestSilo.tile());
     const srcY = this.game.y(bestSilo.tile());
@@ -415,6 +435,7 @@ export class BuildPreviewController implements Controller {
       srcY,
       directionUp,
       sams,
+      siloBlocked,
     };
   }
 
@@ -564,6 +585,7 @@ export class BuildPreviewController implements Controller {
           targetTile,
           rocketDirectionUp,
           isNuke ? this.uiState.upgradeMultiplier || 1 : undefined,
+          launchSiloFor(this.uiState, unitType),
         ),
       );
       if (!shouldPreserveGhostAfterBuild(unitType)) {

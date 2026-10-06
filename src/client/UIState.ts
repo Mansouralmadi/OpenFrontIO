@@ -5,4 +5,6 @@ export interface UIState {
   ghostStructure: PlayerBuildableUnitType | null;
   rocketDirectionUp: boolean;
   upgradeMultiplier: number;
+  // Player-chosen launch silo (unit id); unset = nearest ready silo.
+  selectedSilo?: number;
 }

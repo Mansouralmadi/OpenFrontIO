@@ -12,10 +12,10 @@ import { ConstructionExecution } from "./ConstructionExecution";
 import { DeleteUnitExecution } from "./DeleteUnitExecution";
 import { DonateGoldExecution } from "./DonateGoldExecution";
 import { DonateTroopsExecution } from "./DonateTroopExecution";
-import { HireMercenariesExecution } from "./HireMercenariesExecution";
 import { EmbargoAllExecution } from "./EmbargoAllExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
+import { HireMercenariesExecution } from "./HireMercenariesExecution";
 import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NationExecution } from "./NationExecution";
@@ -118,6 +118,7 @@ export class Executor {
           intent.tile,
           intent.rocketDirectionUp,
           intent.amount,
+          intent.silo,
         );
       case "allianceExtension": {
         return new AllianceExtensionExecution(player, intent.recipient);

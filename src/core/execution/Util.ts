@@ -1,6 +1,6 @@
 import { GameView } from "../../client/view";
 import { NukeMagnitude } from "../configuration/Config";
-import { Game, Player, Structures } from "../game/Game";
+import { Game, MessageType, Player, Structures, UnitType } from "../game/Game";
 import { euclDistFN, GameMap, TileRef } from "../game/GameMap";
 import { ReadonlyTileSet } from "../game/TileSet";
 
@@ -351,4 +351,51 @@ export function calculateTerritoryCenter(
   }
 
   return closestTile;
+}
+
+/** Shape shared by sim units and client UnitViews. */
+interface SiloLike {
+  type(): UnitType;
+  owner(): { id(): string };
+  isActive(): boolean;
+  isInCooldown(): boolean;
+  isUnderConstruction(): boolean;
+}
+
+/**
+ * Why a player-chosen silo can't fire right now: "lost" (destroyed, captured
+ * or not a silo) or "reloading" (cooldown / under construction); null if ready.
+ * Mirrors the ready-silo filter in PlayerImpl.nukeSpawn.
+ */
+export function siloLaunchBlocker(
+  silo: SiloLike | undefined,
+  playerID: string,
+): "lost" | "reloading" | null {
+  if (
+    silo === undefined ||
+    silo.type() !== UnitType.MissileSilo ||
+    !silo.isActive() ||
+    silo.owner().id() !== playerID
+  ) {
+    return "lost";
+  }
+  if (silo.isInCooldown() || silo.isUnderConstruction()) return "reloading";
+  return null;
+}
+
+/** Tell the player why their chosen silo didn't fire (no-op if it could). */
+export function reportSiloLaunchFailure(
+  mg: Game,
+  player: Player,
+  silo: number,
+): void {
+  const reason = siloLaunchBlocker(mg.unit(silo), player.id());
+  if (reason === null) return;
+  mg.displayMessage(
+    reason === "lost"
+      ? "events_display.silo_launch_failed_lost"
+      : "events_display.silo_launch_failed_reloading",
+    MessageType.ATTACK_FAILED,
+    player.id(),
+  );
 }

@@ -13,6 +13,7 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { Controller } from "../../Controller";
+import { launchSiloFor } from "../../controllers/SiloSelectionController";
 import {
   CloseViewEvent,
   MouseDownEvent,
@@ -420,7 +421,13 @@ export class BuildMenu extends LitElement implements Controller {
         ? this.uiState.rocketDirectionUp
         : undefined;
       this.eventBus.emit(
-        new BuildUnitIntentEvent(buildableUnit.type, tile, rocketDirectionUp),
+        new BuildUnitIntentEvent(
+          buildableUnit.type,
+          tile,
+          rocketDirectionUp,
+          undefined,
+          launchSiloFor(this.uiState, buildableUnit.type),
+        ),
       );
     }
     this.hideMenu();

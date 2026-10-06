@@ -33,6 +33,8 @@ export class ConstructionExecution implements Execution {
     private tile: TileRef,
     private rocketDirectionUp?: boolean,
     private amount?: number,
+    // Nukes only: the player-chosen launch silo (unit id).
+    private silo?: number,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -129,13 +131,14 @@ export class ConstructionExecution implements Execution {
               -1,
               0,
               this.rocketDirectionUp,
+              this.silo,
             ),
           );
         }
         break;
       }
       case UnitType.MIRV:
-        this.mg.addExecution(new MirvExecution(player, this.tile));
+        this.mg.addExecution(new MirvExecution(player, this.tile, this.silo));
         break;
       case UnitType.Warship:
         this.mg.addExecution(
@@ -205,6 +208,7 @@ export class ConstructionExecution implements Execution {
       tile: this.tile,
       rocketDirectionUp: this.rocketDirectionUp,
       amount: this.amount,
+      silo: this.silo,
       structure: w.unitOrNull(this.structure),
       ticksUntilComplete: this.ticksUntilComplete,
     });
@@ -218,6 +222,7 @@ export class ConstructionExecution implements Execution {
     this.tile = s.tile;
     this.rocketDirectionUp = s.rocketDirectionUp;
     this.amount = s.amount;
+    this.silo = s.silo;
     this.structure = r.unitOrNull(s.structure);
     this.ticksUntilComplete = s.ticksUntilComplete as Tick;
   }
@@ -232,6 +237,7 @@ const ConstructionStateSchema = z.object({
   tile: zInt(),
   rocketDirectionUp: z.boolean().optional(),
   amount: zInt().optional(),
+  silo: zInt().optional(),
   structure: zRef().nullable(),
   // Unset until a structure with a build time is placed.
   ticksUntilComplete: zInt().optional(),

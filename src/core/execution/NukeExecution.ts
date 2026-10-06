@@ -33,7 +33,7 @@ import { NukeType } from "../StatsSchemas";
 import { deleteUnitsOn, fillEnclosedOcean } from "./EarthquakeExecution";
 import { landBombTerrain } from "./LandBombTerrain";
 import { waterCraterTiles } from "./NukeCrater";
-import { listNukeBreakAlliance } from "./Util";
+import { listNukeBreakAlliance, reportSiloLaunchFailure } from "./Util";
 
 const SPRITE_RADIUS = 16;
 
@@ -58,6 +58,8 @@ export class NukeExecution implements Execution {
     private speed: number = -1,
     private waitTicks = 0,
     private rocketDirectionUp: boolean = true,
+    // Player-chosen launch silo (unit id); unset = nearest ready silo.
+    private silo?: number,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -168,8 +170,16 @@ export class NukeExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.nuke === null) {
-      const spawn = this.player.canBuild(this.nukeType, this.dst);
+      const spawn = this.player.canBuild(
+        this.nukeType,
+        this.dst,
+        null,
+        this.silo,
+      );
       if (spawn === false) {
+        if (this.silo !== undefined) {
+          reportSiloLaunchFailure(this.mg, this.player, this.silo);
+        }
         console.warn(`cannot build Nuke`);
         this.active = false;
         return;
@@ -591,6 +601,7 @@ export class NukeExecution implements Execution {
       speed: this.speed,
       waitTicks: this.waitTicks,
       rocketDirectionUp: this.rocketDirectionUp,
+      silo: this.silo,
     });
   }
 
@@ -608,6 +619,7 @@ export class NukeExecution implements Execution {
     this.speed = s.speed;
     this.waitTicks = s.waitTicks;
     this.rocketDirectionUp = s.rocketDirectionUp;
+    this.silo = s.silo;
   }
 }
 
@@ -623,6 +635,7 @@ const NukeStateSchema = z.object({
   speed: zNum(),
   waitTicks: zInt(),
   rocketDirectionUp: z.boolean(),
+  silo: zInt().optional(),
 });
 type NukeState = z.infer<typeof NukeStateSchema>;
 

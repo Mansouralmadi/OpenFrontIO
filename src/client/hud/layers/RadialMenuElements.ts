@@ -26,6 +26,7 @@ import { allianceRequestTooltip, PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
 
 import { EventBus } from "../../../core/EventBus";
+import { launchSiloFor } from "../../controllers/SiloSelectionController";
 import {
   BuildUnitIntentEvent,
   SendUpgradeStructureIntentEvent,
@@ -551,6 +552,7 @@ function createMenuElements(
                       p.tile,
                       p.uiState?.rocketDirectionUp,
                       amount,
+                      launchSiloFor(p.uiState, buildableUnit.type),
                     ),
                   );
                 } else {
@@ -591,6 +593,8 @@ function createMenuElements(
                   buildableUnit.type,
                   params.tile,
                   rocketDirectionUp,
+                  undefined,
+                  launchSiloFor(params.uiState, buildableUnit.type),
                 ),
               );
             }
