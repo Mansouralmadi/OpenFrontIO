@@ -59,7 +59,13 @@ export interface GeneratedMap {
 
 const WATER = 0;
 const LAND = 1;
-const MIN_ISLAND = 30; // same thresholds as the Go generator
+/**
+ * Smallest island a generated map keeps (tiles): anything smaller is just a
+ * speck to micromanage. 250 tiles (~16x16) on a 2000x1000 map.
+ */
+export function minIslandSize(width: number, height: number): number {
+  return Math.max(150, Math.floor((width * height) / 8000));
+}
 const MIN_LAKE = 200;
 const BUCKETS = 4096;
 
@@ -1077,11 +1083,13 @@ function nationNames(count: number, rand: PseudoRandom): string[] {
 export function generateRandomMap(params: RandomMapParams): GeneratedMap {
   const [width, height] = RANDOM_MAP_SIZES[params.size];
   const full = generateTerrain(params, width, height);
-  removeSmallIslands(full, MIN_ISLAND);
+  const minIsland = minIslandSize(width, height);
+  removeSmallIslands(full, minIsland);
   const map = processWater(full, true);
 
+  // The minimap has a quarter of the tiles, so a quarter of the threshold.
   const raw4x = downscale(map);
-  removeSmallIslands(raw4x, MIN_ISLAND / 2);
+  removeSmallIslands(raw4x, Math.floor(minIsland / 4));
   const map4x = processWater(raw4x, false);
 
   const map16x = processWater(downscale(map4x), false);

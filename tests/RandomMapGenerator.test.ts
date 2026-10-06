@@ -2,6 +2,7 @@ import { GameMapSize, GameMapType } from "../src/core/game/Game";
 import { GameMapLoader } from "../src/core/game/GameMapLoader";
 import {
   generateRandomMap,
+  minIslandSize,
   RANDOM_MAP_STYLES,
   RandomMapParams,
 } from "../src/core/game/RandomMapGenerator";
@@ -100,4 +101,44 @@ describe("RandomMapGenerator", () => {
     );
     expect(data.nations.length).toBe(10);
   });
+});
+
+test("generated maps have no tiny islands", () => {
+  const g = generateRandomMap({
+    seed: 3,
+    landPercent: 35,
+    style: "archipelago",
+    size: "small",
+    mountains: 50,
+    rivers: 50,
+  });
+  const { width: w, height: h } = g.manifest.map;
+  const min = minIslandSize(w, h);
+  const land = (i: number) => (g.mapBin[i] & 0x80) !== 0;
+  const seen = new Uint8Array(w * h);
+  let smallest = Infinity;
+  for (let s = 0; s < w * h; s++) {
+    if (!land(s) || seen[s]) continue;
+    let size = 0;
+    const stack = [s];
+    seen[s] = 1;
+    while (stack.length) {
+      const i = stack.pop()!;
+      size++;
+      const x = i % w;
+      for (const j of [
+        x > 0 ? i - 1 : -1,
+        x < w - 1 ? i + 1 : -1,
+        i - w,
+        i + w,
+      ]) {
+        if (j >= 0 && j < w * h && !seen[j] && land(j)) {
+          seen[j] = 1;
+          stack.push(j);
+        }
+      }
+    }
+    smallest = Math.min(smallest, size);
+  }
+  expect(smallest).toBeGreaterThanOrEqual(min);
 });

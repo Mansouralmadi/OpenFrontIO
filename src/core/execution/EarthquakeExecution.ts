@@ -31,7 +31,8 @@ export const EARTHQUAKE_MAX_TICKS = 4 * TICKS_PER_MINUTE;
 // Patch size: 0.1-0.3% of the map's land, clamped to keep the burst small.
 const PATCH_MIN_PERMYRIAD = 10;
 const PATCH_MAX_PERMYRIAD = 30;
-const PATCH_MIN_TILES = 40;
+// Raised land is never a tiny speck (see minIslandSize).
+const PATCH_MIN_TILES = 150;
 const PATCH_MAX_TILES = 4000;
 const EXTEND_COAST_PERCENT = 30;
 // New islands keep this much open water to existing land.
