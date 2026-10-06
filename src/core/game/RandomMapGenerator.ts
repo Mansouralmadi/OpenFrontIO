@@ -60,12 +60,17 @@ export interface GeneratedMap {
 const WATER = 0;
 const LAND = 1;
 /**
- * Smallest island a generated map keeps (tiles): anything smaller is just a
- * speck to micromanage. 250 tiles (~16x16) on a 2000x1000 map.
+ * Islands at least this big (tiles) are always kept: 250 (~16x16) on a
+ * 2000x1000 map. Smaller ones are specks to micromanage, so they're rare.
  */
 export function minIslandSize(width: number, height: number): number {
   return Math.max(150, Math.floor((width * height) / 8000));
 }
+
+/** Islets below this are always removed. */
+export const MIN_ISLET = 50;
+/** An islet between MIN_ISLET and minIslandSize survives 1 in this many. */
+const ISLET_KEEP_ODDS = 5;
 const MIN_LAKE = 200;
 const BUCKETS = 4096;
 
@@ -959,10 +964,35 @@ function components(
   return { label, sizes };
 }
 
-function removeSmallIslands(t: RawTerrain, minSize: number) {
+/**
+ * Removes land pieces under minSize. With `rare`, pieces of at least
+ * rare.min tiles survive 1 in ISLET_KEEP_ODDS, picked by a hash of their
+ * first tile so the same seed keeps the same islets.
+ */
+function removeSmallIslands(
+  t: RawTerrain,
+  minSize: number,
+  rare?: { min: number; seed: number },
+) {
   const { label, sizes } = components(t, LAND);
+  const keep = new Uint8Array(sizes.length);
   for (let i = 0; i < t.type.length; i++) {
-    if (t.type[i] === LAND && sizes[label[i]] < minSize) {
+    if (t.type[i] !== LAND) continue;
+    const c = label[i];
+    if (keep[c] !== 0) continue;
+    // Decided once per piece, at its first (lowest-index) tile.
+    const size = sizes[c];
+    const kept =
+      size >= minSize ||
+      (rare !== undefined &&
+        size >= rare.min &&
+        hash(i % t.width, Math.floor(i / t.width), rare.seed) %
+          ISLET_KEEP_ODDS ===
+          0);
+    keep[c] = kept ? 1 : 2;
+  }
+  for (let i = 0; i < t.type.length; i++) {
+    if (t.type[i] === LAND && keep[label[i]] === 2) {
       t.type[i] = WATER;
       t.mag[i] = 0;
     }
@@ -1084,12 +1114,13 @@ export function generateRandomMap(params: RandomMapParams): GeneratedMap {
   const [width, height] = RANDOM_MAP_SIZES[params.size];
   const full = generateTerrain(params, width, height);
   const minIsland = minIslandSize(width, height);
-  removeSmallIslands(full, minIsland);
+  removeSmallIslands(full, minIsland, { min: MIN_ISLET, seed: params.seed });
   const map = processWater(full, true);
 
-  // The minimap has a quarter of the tiles, so a quarter of the threshold.
+  // Islands were already filtered at full size; on the minimap (a quarter of
+  // the tiles, shrunk further where water wins) only drop leftover specks.
   const raw4x = downscale(map);
-  removeSmallIslands(raw4x, Math.floor(minIsland / 4));
+  removeSmallIslands(raw4x, Math.floor(MIN_ISLET / 8));
   const map4x = processWater(raw4x, false);
 
   const map16x = processWater(downscale(map4x), false);

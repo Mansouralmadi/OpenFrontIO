@@ -2,6 +2,7 @@ import { GameMapSize, GameMapType } from "../src/core/game/Game";
 import { GameMapLoader } from "../src/core/game/GameMapLoader";
 import {
   generateRandomMap,
+  MIN_ISLET,
   minIslandSize,
   RANDOM_MAP_STYLES,
   RandomMapParams,
@@ -117,6 +118,8 @@ test("generated maps have no tiny islands", () => {
   const land = (i: number) => (g.mapBin[i] & 0x80) !== 0;
   const seen = new Uint8Array(w * h);
   let smallest = Infinity;
+  let small = 0;
+  let pieces = 0;
   for (let s = 0; s < w * h; s++) {
     if (!land(s) || seen[s]) continue;
     let size = 0;
@@ -139,6 +142,11 @@ test("generated maps have no tiny islands", () => {
       }
     }
     smallest = Math.min(smallest, size);
+    pieces++;
+    if (size < min) small++;
   }
-  expect(smallest).toBeGreaterThanOrEqual(min);
+  expect(smallest).toBeGreaterThanOrEqual(MIN_ISLET);
+  // Islets below the regular minimum are the exception, not the rule.
+  expect(small).toBeLessThanOrEqual(Math.max(2, Math.floor(pieces / 4)));
+  expect(min).toBeGreaterThan(MIN_ISLET);
 });
