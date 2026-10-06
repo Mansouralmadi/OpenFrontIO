@@ -44,6 +44,7 @@ const basePlayer: PlayerState = {
   mercenaries: 0,
   mercenaryExpiresAt: 0,
   recentMercenaryHires: 0,
+  happiness: 50,
   gold: 50_000,
   tradeGold: 100,
   trainGold: 200,
@@ -79,6 +80,7 @@ const playerAlternatives: { [K in keyof PlayerFields]: PlayerFields[K] } = {
   mercenaries: 1200,
   mercenaryExpiresAt: 3000,
   recentMercenaryHires: 2,
+  happiness: 73,
   gold: 50_000.5, // fractional → f64 escape
   tradeGold: 100 + 40_000, // beyond i16 → f64 escape
   trainGold: 150, // negative delta

@@ -123,6 +123,7 @@ const unitOptions: { type: UnitType; translationKey: string }[] = [
     translationKey: "unit_type.antimatter_bomb",
   },
   { type: UnitType.Factory, translationKey: "unit_type.factory" },
+  { type: UnitType.Farm, translationKey: "unit_type.farm" },
 ];
 
 const MAP_ICON = svg`<path

@@ -217,6 +217,9 @@ export class ReplayPlayerView {
   recentMercenaryHires(): number {
     return this.state?.recentMercenaryHires ?? 0;
   }
+  happiness(): number {
+    return this.state?.happiness ?? 50;
+  }
   adminCapacity(): number {
     const config = this.game.config();
     return config.adminCapacity(

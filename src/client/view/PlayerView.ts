@@ -448,6 +448,9 @@ export class PlayerView {
   recentMercenaryHires(): number {
     return this.state.recentMercenaryHires;
   }
+  happiness(): number {
+    return this.state.happiness;
+  }
   adminCapacity(): number {
     const config = this.game.config();
     return config.adminCapacity(

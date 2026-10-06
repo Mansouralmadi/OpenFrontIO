@@ -52,6 +52,7 @@ export function diffPlayerUpdate(
     prev.mercenaries === next.mercenaries &&
     prev.mercenaryExpiresAt === next.mercenaryExpiresAt &&
     prev.recentMercenaryHires === next.recentMercenaryHires &&
+    prev.happiness === next.happiness &&
     prev.tradeGold === next.tradeGold &&
     prev.trainGold === next.trainGold &&
     prev.piracyGold === next.piracyGold &&
@@ -118,6 +119,7 @@ export function diffPlayerUpdate(
     "recentMercenaryHires",
     prev.recentMercenaryHires === next.recentMercenaryHires,
   );
+  setIfDifferent("happiness", prev.happiness === next.happiness);
   setIfDifferent("tradeGold", prev.tradeGold === next.tradeGold);
   setIfDifferent("trainGold", prev.trainGold === next.trainGold);
   setIfDifferent("piracyGold", prev.piracyGold === next.piracyGold);

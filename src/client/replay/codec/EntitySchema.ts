@@ -390,7 +390,8 @@ export const PLAYER_FIELDS: readonly FieldDef<PlayerFields>[] = [
   field(["unintegratedTiles", COUNTER]),
   field(["mercenaries", COUNTER]),
   field(["mercenaryExpiresAt", COUNTER]),
-  field(["recentMercenaryHires", COUNTER]),
+  // Grouped: PLAYER_FIELDS is at the u32 mask limit.
+  field(["recentMercenaryHires", COUNTER], ["happiness", COUNTER]),
 ];
 
 export const UNIT_FIELDS: readonly FieldDef<UnitFields>[] = [

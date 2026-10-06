@@ -70,6 +70,7 @@ export interface PlayerState {
   mercenaries: number;
   mercenaryExpiresAt: number;
   recentMercenaryHires: number;
+  happiness: number;
   gold: number;
   /** Cumulative ship-trade revenue (live, from PlayerUpdate). */
   tradeGold: number;

@@ -248,6 +248,8 @@ export interface PlayerUpdate {
   mercenaries?: number;
   mercenaryExpiresAt?: number;
   recentMercenaryHires?: number;
+  /** 0..100 (see HAPPINESS in Config). */
+  happiness?: number;
   gold?: Gold;
   /** Cumulative ship-trade revenue (changes only on arrivals, so it diffs). */
   tradeGold?: Gold;

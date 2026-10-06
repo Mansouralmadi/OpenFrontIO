@@ -71,6 +71,9 @@ function getStructureRatios(
       ratioPerCity: 0.2,
       perceivedCostIncreasePerOwned: 1,
     },
+    // First farm at 3 cities; tried last in the build order so it never
+    // starves cities/ports/factories/SAMs.
+    [UnitType.Farm]: { ratioPerCity: 0.4, perceivedCostIncreasePerOwned: 1 },
   };
 }
 
@@ -541,6 +544,7 @@ export class NationStructureBehavior {
       UnitType.Factory,
       UnitType.SAMLauncher,
       UnitType.MissileSilo,
+      UnitType.Farm,
     ];
 
     const nukesEnabled =
@@ -988,6 +992,8 @@ export class NationStructureBehavior {
         return this.portValue();
       case UnitType.SAMLauncher:
         return this.samLauncherValue();
+      case UnitType.Farm:
+        return this.farmValue();
       default:
         throw new Error(`Value function not implemented for ${type}`);
     }
@@ -1025,6 +1031,26 @@ export class NationStructureBehavior {
       const d = nearestTileDist(game, otherTiles, tile);
       if (d !== Infinity) w += Math.min(d, structureSpacing);
 
+      return w;
+    };
+  }
+
+  /** Value function for farms: away from the border and from other farms. */
+  private farmValue(): (tile: TileRef) => number {
+    const game = this.game;
+    const borderTiles = this.player.borderTiles();
+    const farmTiles = new Set(
+      this.player.units(UnitType.Farm).map((u) => u.tile()),
+    );
+    const { borderSpacing, structureSpacing } = this.spacingConstants();
+
+    return (tile) => {
+      let w = Math.min(
+        nearestTileDistCapped(game, borderTiles, tile, borderSpacing),
+        borderSpacing,
+      );
+      const d = nearestTileDist(game, farmTiles, tile);
+      if (d !== Infinity) w += Math.min(d, structureSpacing);
       return w;
     };
   }
