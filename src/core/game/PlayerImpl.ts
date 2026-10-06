@@ -1775,6 +1775,7 @@ export class PlayerImpl implements Player {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
       case UnitType.AntimatterBomb:
+      case UnitType.LandBomb:
         return this.nukeSpawn(targetTile, unitType);
       case UnitType.MIRVWarhead:
         return targetTile;

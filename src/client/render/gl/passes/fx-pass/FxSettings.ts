@@ -7,6 +7,7 @@ import {
   UT_ANTIMATTER_BOMB,
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
+  UT_LAND_BOMB,
   UT_MIRV_WARHEAD,
 } from "../../../types";
 import type { RenderSettings } from "../../RenderSettings";
@@ -21,6 +22,7 @@ export function nukeExplosionRadius(
 ): number | undefined {
   switch (unitType) {
     case UT_ATOM_BOMB:
+    case UT_LAND_BOMB: // a small puff: it builds, it doesn't destroy
       return fx.nukeRadiusAtom;
     case UT_HYDROGEN_BOMB:
       return fx.nukeRadiusHydro;

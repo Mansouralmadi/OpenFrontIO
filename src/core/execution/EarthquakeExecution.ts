@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { Execution, Game, MessageType, Player, UnitType } from "../game/Game";
+import {
+  Execution,
+  Game,
+  MessageType,
+  Nukes,
+  Player,
+  UnitType,
+} from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
@@ -39,13 +46,7 @@ const EXTEND_COAST_PERCENT = 30;
 const ISLAND_LAND_CLEARANCE = 3;
 const SITE_ATTEMPTS = 4000;
 
-const AIRBORNE = new Set<UnitType>([
-  UnitType.AtomBomb,
-  UnitType.HydrogenBomb,
-  UnitType.MIRV,
-  UnitType.MIRVWarhead,
-  UnitType.SAMMissile,
-]);
+const AIRBORNE = new Set<UnitType>([...Nukes.types, UnitType.SAMMissile]);
 
 export interface EarthquakeResult {
   sunk: TileRef[];
@@ -333,7 +334,7 @@ function growPatch(
  * Adds ocean tiles the patch would wall off (within its bounding box) so
  * no lagoon keeps an ocean bit it no longer deserves.
  */
-function fillEnclosedOcean(mg: Game, patch: TileRef[]): TileRef[] {
+export function fillEnclosedOcean(mg: Game, patch: TileRef[]): TileRef[] {
   const map = mg.map();
   let minX = Infinity;
   let minY = Infinity;
@@ -437,7 +438,7 @@ function elevations(
   });
 }
 
-function deleteUnitsOn(mg: Game, tiles: Set<TileRef>): void {
+export function deleteUnitsOn(mg: Game, tiles: Set<TileRef>): void {
   if (tiles.size === 0) return;
   for (const unit of mg.units()) {
     if (

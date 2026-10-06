@@ -15,6 +15,7 @@ import {
   UT_DEFENSE_POST,
   UT_FACTORY,
   UT_HYDROGEN_BOMB,
+  UT_LAND_BOMB,
   UT_MIRV,
   UT_MIRV_WARHEAD,
   UT_MISSILE_SILO,
@@ -56,6 +57,7 @@ const LIGHT_CONFIGS: Record<string, LightConfig> = {
   [UT_ATOM_BOMB]: { r: 1.0, g: 0.9, b: 0.7, radius: 16, intensity: 1.1 },
   [UT_HYDROGEN_BOMB]: { r: 1.0, g: 0.95, b: 0.6, radius: 22, intensity: 1.3 },
   [UT_ANTIMATTER_BOMB]: { r: 0.75, g: 0.6, b: 1.0, radius: 30, intensity: 1.6 },
+  [UT_LAND_BOMB]: { r: 0.6, g: 1.0, b: 0.6, radius: 16, intensity: 1.1 },
   [UT_MIRV]: { r: 1.0, g: 0.9, b: 0.7, radius: 18, intensity: 1.2 },
   [UT_MIRV_WARHEAD]: { r: 1.0, g: 0.6, b: 0.3, radius: 12, intensity: 1.0 },
   // A train is many UT_TRAIN units (engine + tail + carriages) in a line, and

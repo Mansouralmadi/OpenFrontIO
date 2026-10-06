@@ -30,6 +30,8 @@ import type {
 } from "../snapshot/SnapshotContext";
 import { zInt, zNum, zPlayerRef, zRef, zTile } from "../snapshot/SnapshotType";
 import { NukeType } from "../StatsSchemas";
+import { deleteUnitsOn, fillEnclosedOcean } from "./EarthquakeExecution";
+import { landBombTerrain } from "./LandBombTerrain";
 import { waterCraterTiles } from "./NukeCrater";
 import { listNukeBreakAlliance } from "./Util";
 
@@ -197,7 +199,11 @@ export class NukeExecution implements Execution {
       });
       this.nuke.updateNukeState({ waitTicks: this.waitTicks });
       this.recordMotionPlan(ticks);
-      if (this.nuke.type() !== UnitType.MIRVWarhead) {
+      // A land bomb hurts no one, so it breaks no alliances.
+      if (
+        this.nuke.type() !== UnitType.MIRVWarhead &&
+        this.nuke.type() !== UnitType.LandBomb
+      ) {
         this.maybeBreakAlliances();
       }
       if (this.mg.hasOwner(this.dst)) {
@@ -367,6 +373,11 @@ export class NukeExecution implements Execution {
       throw new Error("Not initialized");
     }
 
+    if (this.nukeType === UnitType.LandBomb) {
+      this.raiseLand();
+      return;
+    }
+
     const mg = this.mg;
     const config = mg.config();
 
@@ -490,6 +501,47 @@ export class NukeExecution implements Execution {
     this.mg
       .stats()
       .bombLand(this.player, this.target(), this.nuke.type() as NukeType);
+  }
+
+  /**
+   * Land bomb impact: a natural-looking landmass (see LandBombTerrain) rises
+   * from the water inside the blast radius as unowned land. Existing land is
+   * untouched; ships on the new land are wrecked. Uses the earthquake uplift
+   * path for terrain, minimap and water-graph updates.
+   */
+  private raiseLand() {
+    const mg = this.mg;
+    const nuke = this.nuke!;
+    const { outer } = mg.config().nukeMagnitudes(UnitType.LandBomb, mg);
+    const { tiles, magnitudes } = landBombTerrain(
+      mg,
+      this.dst,
+      outer,
+      mg.ticks() ^ Math.imul(this.dst, 0x9e3779b1),
+    );
+    if (tiles.length > 0) {
+      // Ocean the new land walls off rises too (raiseLand keeps ocean bits).
+      const raised = fillEnclosedOcean(mg, tiles);
+      deleteUnitsOn(mg, new Set(raised));
+      mg.raiseLand(raised, [
+        ...magnitudes,
+        ...new Array<number>(raised.length - tiles.length).fill(2),
+      ]);
+      mg.displayMessage(
+        "events_display.land_bomb_detonated",
+        MessageType.NUKE_DETONATED,
+        null,
+        undefined,
+        { name: this.player.displayName() },
+        undefined,
+        this.player.id(),
+      );
+    }
+    this.redrawBuildings(outer + SPRITE_RADIUS);
+    this.active = false;
+    nuke.setReachedTarget();
+    nuke.delete(false);
+    mg.stats().bombLand(this.player, this.target(), UnitType.LandBomb);
   }
 
   private redrawBuildings(range: number) {

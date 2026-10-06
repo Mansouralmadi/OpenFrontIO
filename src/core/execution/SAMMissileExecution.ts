@@ -28,6 +28,7 @@ const INTERCEPTED_UNIT_TRANSLATION_KEYS: Partial<Record<UnitType, string>> = {
   [UnitType.AtomBomb]: "unit_type.atom_bomb",
   [UnitType.HydrogenBomb]: "unit_type.hydrogen_bomb",
   [UnitType.AntimatterBomb]: "unit_type.antimatter_bomb",
+  [UnitType.LandBomb]: "unit_type.land_bomb",
   [UnitType.MIRVWarhead]: "unit_type.mirv",
 };
 
@@ -66,6 +67,7 @@ export class SAMMissileExecution implements Execution {
       UnitType.AtomBomb,
       UnitType.HydrogenBomb,
       UnitType.AntimatterBomb,
+      UnitType.LandBomb,
       UnitType.MIRVWarhead,
     ];
     if (
