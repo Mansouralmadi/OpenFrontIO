@@ -399,7 +399,7 @@
     "army_limit_warning": "You're near your army limit! Consider sending troops to teammates.",
     "attack_ratio": "{percent}%\n({troops})",
     "happiness": "Happiness: {value}",
-    "happiness_tooltip": "Farms raise happiness; unintegrated land lowers it. Troop growth runs from 75% at 0 to 125% at 100, and unhappy land rebels sooner (happy land later).",
+    "happiness_tooltip": "Farms raise happiness; unintegrated land lowers it. Troop growth runs from 50% at 0 to 150% at 100, and unhappy land rebels sooner (happy land later).",
     "integrating": "Integrating: {tiles} tiles",
     "low_troops_warning": "You are very low on troops - You should always keep some troops for defense.",
     "mercenaries_active": "Mercenaries: {troops} ({time})",

@@ -115,16 +115,16 @@ describe("Happiness", () => {
     expect(a.happiness()).toBe(50);
   });
 
-  test("troop growth scales 0.75x / 1x / 1.25x at happiness 0 / 50 / 100", async () => {
+  test("troop growth scales 0.5x / 1x / 1.5x at happiness 0 / 50 / 100", async () => {
     const { game, a } = await twoPlayers();
     const c = game.config();
     a.setHappiness(50);
     const base = c.troopIncreaseRate(a);
     expect(base).toBeGreaterThan(0);
     a.setHappiness(0);
-    expect(c.troopIncreaseRate(a) / base).toBeCloseTo(0.75);
+    expect(c.troopIncreaseRate(a) / base).toBeCloseTo(0.5);
     a.setHappiness(100);
-    expect(c.troopIncreaseRate(a) / base).toBeCloseTo(1.25);
+    expect(c.troopIncreaseRate(a) / base).toBeCloseTo(1.5);
   });
 
   test("PlayerExecution refreshes happiness and player updates carry it", async () => {

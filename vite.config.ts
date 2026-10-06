@@ -427,6 +427,10 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 9000,
       host: process.env.VITE_HOST === "lan",
+      // Share mode: also accept Cloudflare quick-tunnel URLs so friends can
+      // join over the internet (cloudflared tunnel --url http://localhost:9000).
+      allowedHosts:
+        process.env.VITE_HOST === "lan" ? [".trycloudflare.com"] : undefined,
       // Automatically open the browser when the server starts
       open: process.env.SKIP_BROWSER_OPEN !== "true",
       proxy: {

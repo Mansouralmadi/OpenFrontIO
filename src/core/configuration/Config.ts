@@ -237,8 +237,8 @@ const HAPPINESS = {
   farmMax: 40,
   penaltyPerUnintegratedPercent: 0.6,
   unintegratedMaxPenalty: 40,
-  troopFactorAtZero: 0.75,
-  troopFactorAtMax: 1.25,
+  troopFactorAtZero: 0.5,
+  troopFactorAtMax: 1.5,
   rebellionTicksAtZero: 30 * 10,
   rebellionTicksAtMax: 120 * 10,
   calmThreshold: 90,
@@ -1214,7 +1214,7 @@ export class Config {
     return within(h.base + farms - penalty, 0, 100);
   }
 
-  /** Troop growth multiplier: 0.75 at 0 happiness, 1 at 50, 1.25 at 100. */
+  /** Troop growth multiplier: 0.5 at 0 happiness, 1 at 50, 1.5 at 100. */
   happinessTroopFactor(happiness: number): number {
     const h = HAPPINESS;
     return (
