@@ -1,10 +1,6 @@
 import { Config, NukeMagnitude } from "../../src/core/configuration/Config";
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
-import {
-  landBombTerrain,
-  MIN_ISLET,
-  minIslandSize,
-} from "../../src/core/execution/LandBombTerrain";
+import { landBombTerrain } from "../../src/core/execution/LandBombTerrain";
 import { SAMMissileExecution } from "../../src/core/execution/SAMMissileExecution";
 import {
   Game,
@@ -16,6 +12,10 @@ import {
 } from "../../src/core/game/Game";
 import { GameMap, TileRef } from "../../src/core/game/GameMap";
 import { GameUpdateType } from "../../src/core/game/GameUpdates";
+import {
+  MIN_ISLET,
+  minIslandSize,
+} from "../../src/core/game/RandomMapGenerator";
 import { ConnectedComponents } from "../../src/core/pathfinding/algorithms/ConnectedComponents";
 import { GameConfig } from "../../src/core/Schemas";
 import { setup } from "../util/Setup";

@@ -9,6 +9,8 @@ import {
   fbmNorm,
   fbmPart,
   hash,
+  MIN_ISLET,
+  minIslandSize,
   percentile,
 } from "../game/RandomMapGenerator";
 import { PseudoRandom } from "../PseudoRandom";
@@ -35,18 +37,8 @@ const ISLET_MAX_SHARE = 4; // an islet is at most 1/4 of the main landmass
 // Separate islands, as on generated maps: under MIN_ISLET tiles always go;
 // up to minIslandSize they survive 1 time in SMALL_ISLET_ODDS (hashed), and
 // a bomb leaves at most MAX_SMALL_ISLETS of them.
-export const MIN_ISLET = 50;
 const SMALL_ISLET_ODDS = 5;
 const MAX_SMALL_ISLETS = 1;
-
-/**
- * Smallest island a generated map always keeps.
- * ponytail: copy of RandomMapGenerator's minIslandSize (being added in
- * parallel); import it from there once both branches are merged.
- */
-export function minIslandSize(width: number, height: number): number {
-  return Math.max(150, Math.floor((width * height) / 8000));
-}
 
 export interface RaisedLand {
   tiles: TileRef[];
