@@ -10,6 +10,7 @@ import type {
 } from "../snapshot/SnapshotContext";
 import { zInt, zPlayerRef, zRef } from "../snapshot/SnapshotType";
 import { CityExecution } from "./CityExecution";
+import { integrateAroundCity } from "./CityIntegration";
 import { DefensePostExecution } from "./DefensePostExecution";
 import { FactoryExecution } from "./FactoryExecution";
 import { MirvExecution } from "./MIRVExecution";
@@ -156,6 +157,7 @@ export class ConstructionExecution implements Execution {
         break;
       case UnitType.City:
         this.mg.addExecution(new CityExecution(this.structure!));
+        integrateAroundCity(this.mg, this.structure!);
         break;
       case UnitType.Factory:
         this.mg.addExecution(new FactoryExecution(this.structure!));

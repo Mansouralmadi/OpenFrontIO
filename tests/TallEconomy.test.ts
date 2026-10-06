@@ -1,8 +1,10 @@
 import { vi } from "vitest";
 import { pow } from "../src/core/DetMath";
 import { integrateNearCities } from "../src/core/execution/CityIntegration";
+import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
 import { NationStructureBehavior } from "../src/core/execution/nation/NationStructureBehavior";
 import { PlayerExecution } from "../src/core/execution/PlayerExecution";
+import { UpgradeStructureExecution } from "../src/core/execution/UpgradeStructureExecution";
 import {
   Game,
   Player,
@@ -43,10 +45,10 @@ function addCityLevels(game: Game, p: Player, x: number, y: number, n: number) {
   for (let i = 1; i < n; i++) city.increaseLevel();
 }
 
-async function spawnPhaseGame(): Promise<Game> {
+async function spawnPhaseGame(disableIntegration = false): Promise<Game> {
   return setup(
     MAP,
-    { infiniteGold: true, instantBuild: true },
+    { infiniteGold: true, instantBuild: true, disableIntegration },
     [],
     undefined,
     undefined,
@@ -262,6 +264,56 @@ describe("tall economy: integration backlog", () => {
     expect(config.maxTroops(a)).toBeGreaterThan(lagging);
     // 200 tiles fully integrated sit exactly at the base capacity.
     expect(config.economicTiles(a)).toBe(200);
+  });
+});
+
+describe("tall economy: building cities", () => {
+  test("a new city integrates all its owner's land in its radius at once", async () => {
+    const game = await spawnPhaseGame();
+    const a = human(game, "a");
+    conquerRect(game, a, 0, 0, 10, 10);
+    game.endSpawnPhase();
+    conquerRect(game, a, 10, 0, 90, 100);
+    const before = a.unintegratedTiles();
+
+    game.addExecution(
+      new ConstructionExecution(a, UnitType.City, game.ref(50, 50)),
+    );
+    game.executeNextTick();
+    game.executeNextTick();
+    const city = a.units(UnitType.City)[0];
+    expect(city).toBeDefined();
+    // Radius 30 around (50, 50), edge included; the far corner waits.
+    expect(game.isUnintegrated(game.ref(50 + 30, 50))).toBe(false);
+    expect(game.isUnintegrated(game.ref(50 + 21, 50 + 21))).toBe(false);
+    expect(game.isUnintegrated(game.ref(99, 99))).toBe(true);
+    expect(before - a.unintegratedTiles()).toBeGreaterThan(2500);
+
+    // Upgrading widens the radius (36) and settles the new ring at once.
+    expect(game.isUnintegrated(game.ref(50 + 34, 50))).toBe(true);
+    game.addExecution(new UpgradeStructureExecution(a, city.id()));
+    game.executeNextTick();
+    expect(city.level()).toBe(2);
+    expect(game.isUnintegrated(game.ref(50 + 34, 50))).toBe(false);
+    expect(game.isUnintegrated(game.ref(99, 99))).toBe(true);
+  });
+});
+
+describe("tall economy: integration toggle", () => {
+  test("with integration off, taken land is integrated at once", async () => {
+    const game = await spawnPhaseGame(true);
+    expect(game.config().integration()).toBe(false);
+    const a = human(game, "a");
+    conquerRect(game, a, 0, 0, 10, 10);
+    game.endSpawnPhase();
+    conquerRect(game, a, 10, 0, 30, 50);
+    expect(a.unintegratedTiles()).toBe(0);
+    expect(game.isUnintegrated(game.ref(20, 20))).toBe(false);
+  });
+
+  test("integration is on by default", async () => {
+    const game = await setup(MAP, {});
+    expect(game.config().integration()).toBe(true);
   });
 });
 

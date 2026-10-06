@@ -1,4 +1,4 @@
-import { Game, Player, UnitType } from "../game/Game";
+import { Game, Player, Unit, UnitType } from "../game/Game";
 
 // Packed (dx, dy, dx² + dy², whole distance) quads covering a disk, nearest first. Ties go
 // by dy then dx so every client integrates the same tiles in the same order.
@@ -65,6 +65,33 @@ export function integrateNearCities(game: Game, player: Player): void {
       if (cost > budget) break;
       player.integrateTile(tile);
       budget -= cost;
+    }
+  }
+}
+
+/**
+ * A city just built or upgraded integrates all of its owner's land within its
+ * radius at once, detached land included: building a city is the quick way to
+ * settle newly taken land.
+ */
+export function integrateAroundCity(game: Game, city: Unit): void {
+  const player = city.owner();
+  if (player.unintegratedTiles() === 0) return;
+  const config = game.config();
+  const offsets = spiralOffsets(config.cityIntegrationMaxRadius());
+  const r = config.cityIntegrationRadius(city.level());
+  const r2 = r * r;
+  const smallID = player.smallID();
+  const cx = game.x(city.tile());
+  const cy = game.y(city.tile());
+  for (let i = 0; i < offsets.length; i += 4) {
+    if (offsets[i + 2] > r2) break;
+    const x = cx + offsets[i];
+    const y = cy + offsets[i + 1];
+    if (!game.isValidCoord(x, y)) continue;
+    const tile = game.ref(x, y);
+    if (game.ownerID(tile) === smallID && game.isUnintegrated(tile)) {
+      player.integrateTile(tile);
     }
   }
 }

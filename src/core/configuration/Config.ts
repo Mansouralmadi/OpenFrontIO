@@ -284,7 +284,9 @@ const TALL_ECONOMY = {
   // later.
   integrationBasePerTick: 5,
   integrationBacklogDivisor: 1000,
-  // On top of that each built city integrates its owner's land around it,
+  // Building or upgrading a city integrates all of its owner's land within its
+  // radius at once. After that the city keeps integrating newly taken land
+  // around it,
   // nearest first: perLevel tiles per tick per city level, within radius +
   // radiusPerLevel per level beyond the first (capped at maxRadius) tiles.
   // A city works in a burst every intervalTicks to keep the scan cheap.
@@ -500,6 +502,10 @@ export class Config {
   }
   earthquakes(): boolean {
     return this._gameConfig.earthquakes ?? false;
+  }
+  /** Tall economy integration backlog (and rebellions); on unless disabled. */
+  integration(): boolean {
+    return !(this._gameConfig.disableIntegration ?? false);
   }
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;

@@ -187,7 +187,9 @@ export class GameRunner {
       );
     }
     this.game.addExecution(new WinCheckExecution());
-    this.game.addExecution(new RebellionExecution(this.execManager.gameID()));
+    if (this.game.config().integration()) {
+      this.game.addExecution(new RebellionExecution(this.execManager.gameID()));
+    }
     if (this.game.config().doomsdayClockConfig().enabled) {
       this.game.addExecution(new DoomsdayClockExecution());
     }

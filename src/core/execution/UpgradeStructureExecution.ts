@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Execution, Game, Player, Unit } from "../game/Game";
+import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type {
   ExecRecord,
@@ -7,6 +7,7 @@ import type {
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
 import { zNum, zPlayerRef, zRef } from "../snapshot/SnapshotType";
+import { integrateAroundCity } from "./CityIntegration";
 
 export class UpgradeStructureExecution implements Execution {
   private structure: Unit | undefined;
@@ -40,6 +41,9 @@ export class UpgradeStructureExecution implements Execution {
         break;
       }
       this.player.upgradeUnit(this.structure);
+    }
+    if (this.structure.type() === UnitType.City) {
+      integrateAroundCity(mg, this.structure);
     }
     return;
   }

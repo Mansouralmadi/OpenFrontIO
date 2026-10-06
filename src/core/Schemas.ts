@@ -596,6 +596,9 @@ export const GameConfigSchema = z.object({
   waterNukes: z.boolean().nullable().optional(),
   // Iron: periodic earthquakes sink coastline and raise new islands.
   earthquakes: z.boolean().optional(),
+  // Iron: turns off the tall economy's integration backlog (and with it
+  // rebellions). Absent means on.
+  disableIntegration: z.boolean().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: zb.uint().optional(),
   // OFM: allowlist of publicIds allowed to join (admin-only, see create_game).

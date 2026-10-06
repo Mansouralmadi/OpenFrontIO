@@ -848,7 +848,7 @@ export class GameImpl implements Game {
     owner._tiles.add(tile);
     // Tall economy: land taken after spawning must integrate before it pays.
     // Integration goes oldest first, so it spreads from the core outward.
-    const unintegrated = this.startTick !== null;
+    const unintegrated = this.startTick !== null && this._config.integration();
     this._map.setUnintegrated(tile, unintegrated);
     if (unintegrated) {
       owner._unintegratedTiles++;
