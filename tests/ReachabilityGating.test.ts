@@ -2,10 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../src/client/ClientEnv";
 import { shouldBlockMultiplayerAction } from "../src/client/GameModeSelector";
 import {
-  attemptInFlight,
   backendUnreachableConfirmed,
   ensureServerList,
-  MANUAL_RETRY_COOLDOWN_MS,
   resetServerList,
   retryServerList,
 } from "../src/client/ServerList";
@@ -170,40 +168,11 @@ describe("the multiplayer entry points while the backend is unreachable", () => 
     expect(messages).toEqual([]);
   });
 
-  it("dims and refuses the API-DEPENDENT entry points once the outage is confirmed", async () => {
-    // Create, Ranked and Join-by-code each have to resolve a server for
-    // something nothing has told this client about, so a dead list API really
-    // does mean the click cannot work.
+  it("never gates multiplayer, even on a confirmed outage (Iron has no API)", async () => {
+    // The fork has no closed-source API, so the server-list fetch always
+    // fails; lobbies still work through our own game server.
     selector = await mountSelector();
-    await announce(false, true);
-
-    expect(
-      selector.querySelectorAll('button[aria-disabled="true"]').length,
-    ).toBeGreaterThan(0);
-    clickEveryButton();
-
-    expect(joinOpen).not.toHaveBeenCalled();
-    expect(hostOpen).not.toHaveBeenCalled();
-  });
-
-  it("says why, on the web, where there is no status bar to read", async () => {
-    selector = await mountSelector();
-    await announce(false, true);
-
-    clickEveryButton();
-
-    // Refusing silently would look like a broken button, and unlike the
-    // desktop gates there is nothing else on screen naming the reason.
-    expect(messages).toContain("common.backend_unreachable");
-  });
-
-  it("re-enables everything when the backend comes back", async () => {
-    selector = await mountSelector();
-    await announce(false, true);
-    clickEveryButton();
-    expect(joinOpen).not.toHaveBeenCalled();
-
-    await announce(true);
+    await confirmOutage();
 
     expect(
       selector.querySelectorAll('button[aria-disabled="true"]').length,
@@ -211,6 +180,7 @@ describe("the multiplayer entry points while the backend is unreachable", () => 
     expect(clickEveryButton()).toBeGreaterThan(0);
     expect(joinOpen).toHaveBeenCalled();
     expect(hostOpen).toHaveBeenCalled();
+    expect(messages).toEqual([]);
   });
 
   it("leaves single-player alone", async () => {
@@ -229,23 +199,6 @@ describe("the multiplayer entry points while the backend is unreachable", () => 
     // to refuse one, and refusing would break the desktop build's core
     // offline promise.
     expect(soloOpen).toHaveBeenCalled();
-  });
-
-  it("gates a selector that mounted after the outage was already confirmed", async () => {
-    // The seed half. No "backend-reachability" event is dispatched anywhere
-    // below: the only ones this document will ever see fired while nothing
-    // was listening, so the accessor is the sole path by which the selector
-    // can know. This is OPE-396's bug, on a new signal.
-    await confirmOutage();
-
-    selector = await mountSelector();
-
-    expect(
-      selector.querySelectorAll('button[aria-disabled="true"]').length,
-    ).toBeGreaterThan(0);
-    clickEveryButton();
-    expect(joinOpen).not.toHaveBeenCalled();
-    expect(hostOpen).not.toHaveBeenCalled();
   });
 
   it("does not gate a selector that mounted after an attempt SUCCEEDED", async () => {
@@ -274,107 +227,6 @@ describe("the multiplayer entry points while the backend is unreachable", () => 
  * reaches the same probe the desktop button does, throttled by the same
  * policy (manualRetryAvailable) and the same clock.
  */
-describe("a refused multiplayer click on the web", () => {
-  /** Past the shared manual-retry cooldown, so a probe is available again. */
-  function advancePastRetryCooldown(): void {
-    clockOffset += MANUAL_RETRY_COOLDOWN_MS + 1;
-  }
-
-  /** Mounts a selector against a module that has already confirmed an outage. */
-  async function mountGated(): Promise<void> {
-    await confirmOutage();
-    selector = await mountSelector();
-    // confirmOutage's own manual retry started the cooldown; step past it so
-    // each test starts from "a probe is available".
-    advancePastRetryCooldown();
-  }
-
-  it("probes the API again", async () => {
-    await mountGated();
-    const before = fetchMock.mock.calls.length;
-
-    clickEveryButton();
-
-    expect(messages).toContain("common.backend_unreachable");
-    expect(fetchMock.mock.calls.length).toBe(before + 1);
-  });
-
-  it("collapses a flurry of refused clicks into a single probe", async () => {
-    // Three gated entry points are clicked in that one pass. The first starts
-    // an attempt; while it is in flight the rest could only join it, so
-    // offering them a request each would just point traffic at a backend that
-    // is already known to be struggling.
-    await mountGated();
-    const before = fetchMock.mock.calls.length;
-
-    clickEveryButton();
-
-    expect(fetchMock.mock.calls.length).toBe(before + 1);
-  });
-
-  it("does not probe again inside the cooldown, but still says why", async () => {
-    await mountGated();
-    clickEveryButton();
-    await vi.waitFor(() => expect(attemptInFlight()).toBe(false));
-    const after = fetchMock.mock.calls.length;
-    messages.length = 0;
-
-    clickEveryButton();
-
-    expect(fetchMock.mock.calls.length).toBe(after);
-    // The player is still being refused, so they are still told so: the
-    // throttle is on the request, not on the explanation.
-    expect(messages).toContain("common.backend_unreachable");
-  });
-
-  it("probes again once the cooldown has elapsed", async () => {
-    await mountGated();
-    clickEveryButton();
-    await vi.waitFor(() => expect(attemptInFlight()).toBe(false));
-    const after = fetchMock.mock.calls.length;
-
-    advancePastRetryCooldown();
-    clickEveryButton();
-
-    expect(fetchMock.mock.calls.length).toBe(after + 1);
-  });
-
-  it("lets the player back in when the probe finds the backend up", async () => {
-    // End to end: a refused click starts the probe, the probe answers, the
-    // reachability event that carries the answer un-dims the buttons, and the
-    // next click goes through. No Retry button involved anywhere.
-    await mountGated();
-    fetchMock.mockImplementation(
-      async () =>
-        new Response("{}", {
-          status: 404,
-        }),
-    );
-
-    clickEveryButton();
-    await vi.waitFor(() => expect(backendUnreachableConfirmed()).toBe(false));
-    await selector.updateComplete;
-
-    expect(
-      selector.querySelectorAll('button[aria-disabled="true"]').length,
-    ).toBe(0);
-    expect(clickEveryButton()).toBeGreaterThan(0);
-    expect(hostOpen).toHaveBeenCalled();
-    expect(joinOpen).toHaveBeenCalled();
-  });
-
-  it("does not probe when the click was not refused", async () => {
-    // The control. A healthy page clicks the same buttons; nothing here may
-    // turn an ordinary click into an extra request.
-    selector = await mountSelector();
-    const before = fetchMock.mock.calls.length;
-
-    clickEveryButton();
-
-    expect(fetchMock.mock.calls.length).toBe(before);
-  });
-});
-
 /**
  * `multiplayerAllowedForSession` refuses every `signed-out` state regardless
  * of `reason`, so "needs-account" gates multiplayer for free and needed no

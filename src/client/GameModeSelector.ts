@@ -86,8 +86,11 @@ const TUTORIAL_ACTION =
  * It is also false when the API answered with anything short of a 5xx -- a
  * 404 for a site with no list is a reachable backend.
  */
-export function multiplayerAllowedForBackend(backendOutage: boolean): boolean {
-  return !backendOutage;
+export function multiplayerAllowedForBackend(_backendOutage: boolean): boolean {
+  // OpenFront Iron has no closed-source API: the server-list fetch always
+  // fails, yet lobbies work fine through our own game server. An "outage"
+  // here would lock every multiplayer button forever, so it never gates.
+  return true;
 }
 
 /**

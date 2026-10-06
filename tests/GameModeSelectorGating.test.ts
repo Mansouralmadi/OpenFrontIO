@@ -131,18 +131,15 @@ describe("shouldBlockMultiplayerAction with a session", () => {
 // already false by the time they reach here. Those are pinned against the
 // real module in tests/client/ServerList.test.ts.
 describe("multiplayerAllowedForBackend", () => {
-  it("allows multiplayer unless an outage is confirmed", () => {
+  it("always allows multiplayer: Iron has no API to be down", () => {
     expect(multiplayerAllowedForBackend(false)).toBe(true);
-  });
-
-  it("blocks multiplayer on a confirmed outage", () => {
-    expect(multiplayerAllowedForBackend(true)).toBe(false);
+    expect(multiplayerAllowedForBackend(true)).toBe(true);
   });
 });
 
 describe("shouldBlockMultiplayerAction with a backend outage", () => {
-  it("blocks on the web, where both desktop states are absent", () => {
-    expect(shouldBlockMultiplayerAction(null, null, true)).toBe(true);
+  it("does not block on the web, even on a confirmed outage", () => {
+    expect(shouldBlockMultiplayerAction(null, null, true)).toBe(false);
   });
 
   it("does not block while the backend is fine", () => {
