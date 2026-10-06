@@ -299,6 +299,39 @@ describe("tall economy: building cities", () => {
   });
 });
 
+test("a refused city upgrade settles nothing", async () => {
+  const game = await setup(
+    MAP,
+    { infiniteGold: false, instantBuild: true },
+    [],
+    undefined,
+    undefined,
+    false,
+  );
+  const a = human(game, "a");
+  conquerRect(game, a, 0, 0, 10, 10);
+  game.endSpawnPhase();
+  a.addGold(10_000_000n);
+  game.addExecution(
+    new ConstructionExecution(a, UnitType.City, game.ref(5, 5)),
+  );
+  game.executeNextTick();
+  game.executeNextTick();
+  const city = a.units(UnitType.City)[0];
+  expect(city).toBeDefined();
+  conquerRect(game, a, 10, 0, 90, 100); // taken after the city: unintegrated
+  a.removeGold(a.gold());
+  expect(a.canUpgradeUnit(city)).toBe(false);
+  const before = a.unintegratedTiles();
+
+  game.addExecution(new UpgradeStructureExecution(a, city.id()));
+  game.executeNextTick();
+  expect(city.level()).toBe(1);
+  expect(game.isUnintegrated(game.ref(12, 5))).toBe(true);
+  // Only the ordinary trickle ran, not a whole radius at once.
+  expect(before - a.unintegratedTiles()).toBeLessThan(500);
+});
+
 describe("tall economy: integration toggle", () => {
   test("with integration off, taken land is integrated at once", async () => {
     const game = await spawnPhaseGame(true);

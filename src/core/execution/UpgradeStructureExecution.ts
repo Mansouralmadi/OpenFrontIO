@@ -31,6 +31,7 @@ export class UpgradeStructureExecution implements Execution {
       return;
     }
 
+    let upgraded = 0;
     for (let i = 0; i < this.amount; i++) {
       if (!this.player.canUpgradeUnit(this.structure)) {
         if (i === 0) {
@@ -41,8 +42,10 @@ export class UpgradeStructureExecution implements Execution {
         break;
       }
       this.player.upgradeUnit(this.structure);
+      upgraded++;
     }
-    if (this.structure.type() === UnitType.City) {
+    // Only a real upgrade settles land; a refused one must not be free.
+    if (upgraded > 0 && this.structure.type() === UnitType.City) {
       integrateAroundCity(mg, this.structure);
     }
     return;
