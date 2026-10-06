@@ -24,6 +24,7 @@ import type {
 import { zInt, zPlayerRef } from "../snapshot/SnapshotType";
 import { getMode, simpleHash } from "../Util";
 import { integrateNearCities } from "./CityIntegration";
+import { refreshHappiness } from "./Happiness";
 
 const TICKS_PER_CLUSTER_CALC = 20;
 
@@ -95,9 +96,19 @@ export class PlayerExecution implements Execution {
       return;
     }
 
+    if (
+      (ticks + this.player.smallID()) %
+        this.config.happinessConfig().recomputeIntervalTicks ===
+      0
+    ) {
+      refreshHappiness(this.mg, this.player);
+    }
+
     const backlog = this.player.unintegratedTiles();
     if (backlog > 0) {
-      this.player.integrateTiles(this.config.integrationPerTick(backlog));
+      this.player.integrateTiles(
+        this.config.integrationPerTick(backlog, this.player.integrationBonus()),
+      );
       integrateNearCities(this.mg, this.player);
     }
 

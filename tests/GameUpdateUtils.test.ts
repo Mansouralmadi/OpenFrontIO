@@ -25,6 +25,7 @@ function makePlayerState(overrides: Partial<PlayerState> = {}): PlayerState {
     mercenaries: 0,
     mercenaryExpiresAt: 0,
     recentMercenaryHires: 0,
+    happiness: 50,
     gold: 0,
     tradeGold: 0,
     trainGold: 0,

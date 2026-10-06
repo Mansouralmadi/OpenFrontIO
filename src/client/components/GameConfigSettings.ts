@@ -124,6 +124,7 @@ const unitOptions: { type: UnitType; translationKey: string }[] = [
   },
   { type: UnitType.LandBomb, translationKey: "unit_type.land_bomb" },
   { type: UnitType.Factory, translationKey: "unit_type.factory" },
+  { type: UnitType.Farm, translationKey: "unit_type.farm" },
 ];
 
 const MAP_ICON = svg`<path

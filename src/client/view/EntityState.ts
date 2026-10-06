@@ -159,6 +159,7 @@ export function playerStateFromUpdate(pu: PlayerUpdate): PlayerState {
     mercenaries: pu.mercenaries ?? 0,
     mercenaryExpiresAt: pu.mercenaryExpiresAt ?? 0,
     recentMercenaryHires: pu.recentMercenaryHires ?? 0,
+    happiness: pu.happiness ?? 50,
     gold: Number(pu.gold!),
     tradeGold: Number(pu.tradeGold ?? 0n),
     trainGold: Number(pu.trainGold ?? 0n),

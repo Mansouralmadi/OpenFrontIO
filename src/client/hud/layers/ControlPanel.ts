@@ -71,6 +71,7 @@ export class ControlPanel extends LitElement implements Controller {
   // Mercenaries: unspent pool, seconds left on the contract, next hire.
   @state()
   private _mercenaries = 0;
+  private _happiness = 50;
   @state()
   private _mercenarySecondsLeft = 0;
   @state()
@@ -167,6 +168,7 @@ export class ControlPanel extends LitElement implements Controller {
     this._unintegrated = player.unintegratedTiles();
     this._capacity = player.adminCapacity();
     this._mercenaries = player.mercenaries();
+    this._happiness = player.happiness();
     this._mercenarySecondsLeft = Math.max(
       0,
       Math.ceil((player.mercenaryExpiresAt() - this.game.ticks()) / 10),
@@ -551,6 +553,17 @@ export class ControlPanel extends LitElement implements Controller {
           >${translateText("control_panel.admin_capacity", {
             tiles: renderNumber(this._tiles),
             capacity: renderNumber(this._capacity),
+          })}</span
+        >
+        <span
+          class=${this._happiness < 30
+            ? "text-red-400"
+            : this._happiness > 70
+              ? "text-green-400"
+              : "text-yellow-300"}
+          title=${translateText("control_panel.happiness_tooltip")}
+          >${translateText("control_panel.happiness", {
+            value: this._happiness,
           })}</span
         >
         ${this._unintegrated > 0

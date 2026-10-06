@@ -191,6 +191,8 @@ export class PlayerImpl implements Player {
   private integrationBase = 0;
 
   private _mercenaries = 0;
+  private _happiness = 50;
+  private _integrationBonus = 0;
   private _mercenaryExpiresAt = 0;
   private _mercenaryHireTicks: Tick[] = [];
 
@@ -415,6 +417,7 @@ export class PlayerImpl implements Player {
       mercenaries: this._mercenaries,
       mercenaryExpiresAt: this._mercenaryExpiresAt,
       recentMercenaryHires: this.recentMercenaryHires(),
+      happiness: this._happiness,
       gold: this._gold,
       tradeGold: this._tradeGold,
       trainGold: this._trainGold,
@@ -593,6 +596,16 @@ export class PlayerImpl implements Player {
     return total;
   }
 
+  totalUnitLevels(type: UnitType): number {
+    let total = 0;
+    for (const unit of this._units) {
+      if (unit.type() === type && !unit.isUnderConstruction()) {
+        total += unit.level();
+      }
+    }
+    return total;
+  }
+
   sharesBorderWith(other: Player | TerraNullius): boolean {
     const map = this.mg.map();
     const otherID = other.smallID();
@@ -618,6 +631,22 @@ export class PlayerImpl implements Player {
 
   mercenaries(): number {
     return this._mercenaries;
+  }
+
+  happiness(): number {
+    return this._happiness;
+  }
+
+  setHappiness(happiness: number): void {
+    this._happiness = happiness;
+  }
+
+  integrationBonus(): number {
+    return this._integrationBonus;
+  }
+
+  setIntegrationBonus(bonus: number): void {
+    this._integrationBonus = bonus;
   }
 
   mercenaryExpiresAt(): Tick {
@@ -1797,6 +1826,7 @@ export class PlayerImpl implements Player {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
+      case UnitType.Farm:
         return this.landBasedStructureSpawn(targetTile, validTiles);
       default:
         assertNever(unitType);
@@ -2172,6 +2202,8 @@ export class PlayerImpl implements Player {
       mercenaries: this._mercenaries,
       mercenaryExpiresAt: this._mercenaryExpiresAt,
       mercenaryHireTicks: [...this._mercenaryHireTicks],
+      happiness: this._happiness,
+      integrationBonus: this._integrationBonus,
       integrationQueue: w.tiles(this._integrationQueue),
       integrationHead: this.integrationHead,
       integrationBase: this.integrationBase,
@@ -2254,6 +2286,8 @@ export class PlayerImpl implements Player {
     this._mercenaries = s.mercenaries;
     this._mercenaryExpiresAt = s.mercenaryExpiresAt;
     this._mercenaryHireTicks = [...s.mercenaryHireTicks];
+    this._happiness = s.happiness;
+    this._integrationBonus = s.integrationBonus;
     this._integrationQueue = Array.from(s.integrationQueue);
     this.integrationHead = s.integrationHead;
     this.integrationBase = s.integrationBase;
@@ -2305,7 +2339,7 @@ export class PlayerImpl implements Player {
 
 export const PlayerSnapshot = snapshotType({
   name: "Player",
-  version: 5,
+  version: 6,
   migrations: {
     // v2: tall economy integration backlog; older games had none.
     1: (d) => ({ ...d, unintegratedTiles: 0 }),
@@ -2326,6 +2360,9 @@ export const PlayerSnapshot = snapshotType({
     }),
     // v5: absolute integration queue positions (rebellion timing).
     4: (d) => ({ ...d, integrationBase: 0 }),
+    // v6: happiness and the structure integration bonus (refreshed within
+    // HAPPINESS.recomputeIntervalTicks).
+    5: (d) => ({ ...d, happiness: 50, integrationBonus: 0 }),
   },
   schema: z.object({
     smallID: zInt(),
@@ -2359,6 +2396,8 @@ export const PlayerSnapshot = snapshotType({
     mercenaries: zInt(),
     mercenaryExpiresAt: zInt(),
     mercenaryHireTicks: z.array(zInt()),
+    happiness: zInt(),
+    integrationBonus: zInt(),
     borderTiles: zTiles(),
     units: z.array(zRef()),
     unitsVersion: zInt(),

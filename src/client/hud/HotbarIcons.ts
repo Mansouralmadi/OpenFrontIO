@@ -3,6 +3,7 @@ import { assetUrl } from "../../core/AssetUrls";
 export const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 export const cityIcon = assetUrl("images/CityIconWhite.svg");
 export const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
+export const farmIcon = assetUrl("images/FarmIconWhite.svg");
 export const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
 export const antimatterBombIcon = assetUrl("images/AntimatterBombIcon.svg");
 export const landBombIcon = assetUrl("images/LandBombIcon.svg");

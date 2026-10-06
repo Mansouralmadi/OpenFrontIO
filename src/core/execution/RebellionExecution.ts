@@ -87,19 +87,33 @@ export class RebellionExecution implements Execution {
     }
     const samples = watch.samples;
     samples.push(ticks, p.integrationQueueEnd());
-    // Keep the newest sample old enough to judge by, and everything after.
+    // Happier players tolerate unintegrated land longer (see HAPPINESS).
+    const config = this.mg.config();
+    const happiness = p.happiness();
+    const need = config.rebellionUnintegratedTicks(happiness);
+    const longest = config.rebellionUnintegratedTicks(100);
+    // Keep the newest sample old enough for any happiness, and everything
+    // after; `old` is the newest sample old enough for the current one.
+    let keep = -1;
     let old = -1;
     for (let i = 0; i < samples.length; i += 2) {
-      if (samples[i] <= ticks - cfg.unintegratedTicks) old = i;
+      if (samples[i] <= ticks - longest) keep = i;
+      if (samples[i] <= ticks - need) old = i;
+    }
+    if (keep > 0) {
+      samples.splice(0, keep);
+      old -= keep;
     }
     if (old < 0) return;
-    samples.splice(0, old);
 
     if (ticks - this.startTick < cfg.graceTicks) return;
     if (ticks < watch.cooldownUntil) return;
-    const minTiles = this.mg.config().rebellionMinTiles(this.mg.numLandTiles());
+    const minTiles = config.rebellionMinTiles(
+      this.mg.numLandTiles(),
+      happiness,
+    );
     if (p.unintegratedTiles() < minTiles) return;
-    const region = this.findRegion(p, samples[1], minTiles);
+    const region = this.findRegion(p, samples[old + 1], minTiles);
     if (region === null) return;
     this.rebel(p, region);
     watch.cooldownUntil = ticks + cfg.cooldownTicks;

@@ -19,7 +19,7 @@ import type {
  * Stored replays are also keyed by build, so this only matters for dev
  * builds, which all share "DEV".
  */
-export const REPLAY_VERSION = 2;
+export const REPLAY_VERSION = 3;
 
 /**
  * Frames per chunk. Each chunk starts with a keyframe, and keyframes are

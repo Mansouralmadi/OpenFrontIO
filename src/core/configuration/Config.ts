@@ -209,6 +209,45 @@ export const JwksSchema = z.object({
 /** SAM launcher construction duration in ticks (non-instant-build). */
 export const SAM_CONSTRUCTION_TICKS = 30 * 10;
 
+// Farm cost doubles per farm level owned, like the factory: 100K, 200K, 400K,
+// then FARM_MAX_COST. Farms build on any owned land (same rules as a city).
+const FARM_BASE_COST = 100_000;
+const FARM_MAX_COST = 500_000;
+
+// HAPPINESS: a per-player 0..100 integer, recomputed every
+// recomputeIntervalTicks (see Happiness.ts). base, + farms (perFarmLevel per
+// level for the first farmFullLevels levels, then perFarmLevelLate, capped at
+// farmMax), - unintegrated land (penaltyPerUnintegratedPercent per percent of
+// owned land that is unintegrated, capped at unintegratedMaxPenalty).
+// Effects: troop growth x troopFactorAtZero..1..troopFactorAtMax (linear
+// over 0..50..100); a rebellion needs rebellionTicksAtZero..REBELLION
+// unintegratedTicks..rebellionTicksAtMax of unintegration (linear over
+// 0..50..100), and at calmThreshold+ the smallest rebel region grows by
+// calmMinSizeMultiplier.
+// The same pass sets the integration bonus (tiles/tick added to the
+// empire-wide integration): perFactoryLevel per completed factory level, plus
+// perConnectedStructure per other completed structure whose rail cluster holds
+// another of the owner's cities, capped at integrationBonusMax.
+const HAPPINESS = {
+  recomputeIntervalTicks: 10,
+  base: 50,
+  perFarmLevel: 6,
+  farmFullLevels: 5,
+  perFarmLevelLate: 3,
+  farmMax: 40,
+  penaltyPerUnintegratedPercent: 0.6,
+  unintegratedMaxPenalty: 40,
+  troopFactorAtZero: 0.75,
+  troopFactorAtMax: 1.25,
+  rebellionTicksAtZero: 30 * 10,
+  rebellionTicksAtMax: 120 * 10,
+  calmThreshold: 90,
+  calmMinSizeMultiplier: 1.5,
+  perFactoryLevel: 3,
+  perConnectedStructure: 1,
+  integrationBonusMax: 60,
+};
+
 // Doomsday Clock tunables (anti-stall). Off unless enabled in GameConfig.
 // Times in seconds. The required map share rises in waves (levels + times in
 // DoomsdayClock.ts, chosen by `speed`). A side caught below the bar gets a
@@ -778,6 +817,17 @@ export class Config {
           upgradable: true,
         };
         break;
+      case UnitType.Farm:
+        info = {
+          cost: this.costWrapper(
+            (numUnits: number) =>
+              Math.min(FARM_MAX_COST, pow2(numUnits) * FARM_BASE_COST),
+            UnitType.Farm,
+          ),
+          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          upgradable: true,
+        };
+        break;
       case UnitType.Train:
         info = {
           cost: () => 0n,
@@ -1130,12 +1180,64 @@ export class Config {
     return levels;
   }
 
-  /** Backlog tiles integrated per tick empire-wide (tall economy, see TALL_ECONOMY). */
-  integrationPerTick(backlog: number): number {
+  /**
+   * Backlog tiles integrated per tick empire-wide (tall economy, see
+   * TALL_ECONOMY), plus the structure bonus (see HAPPINESS).
+   */
+  integrationPerTick(backlog: number, bonus: number = 0): number {
     const t = TALL_ECONOMY;
     return (
       t.integrationBasePerTick +
-      Math.floor(backlog / t.integrationBacklogDivisor)
+      Math.floor(backlog / t.integrationBacklogDivisor) +
+      bonus
+    );
+  }
+
+  happinessConfig(): typeof HAPPINESS {
+    return HAPPINESS;
+  }
+
+  /** Happiness (0..100) from completed farm levels and the unintegrated share. */
+  happiness(farmLevels: number, unintegrated: number, tiles: number): number {
+    const h = HAPPINESS;
+    const early = Math.min(farmLevels, h.farmFullLevels);
+    const late = Math.max(farmLevels - h.farmFullLevels, 0);
+    const farms = Math.min(
+      h.farmMax,
+      early * h.perFarmLevel + late * h.perFarmLevelLate,
+    );
+    const percent = tiles > 0 ? (unintegrated * 100) / tiles : 0;
+    const penalty = Math.min(
+      h.unintegratedMaxPenalty,
+      Math.floor(percent * h.penaltyPerUnintegratedPercent),
+    );
+    return within(h.base + farms - penalty, 0, 100);
+  }
+
+  /** Troop growth multiplier: 0.75 at 0 happiness, 1 at 50, 1.25 at 100. */
+  happinessTroopFactor(happiness: number): number {
+    const h = HAPPINESS;
+    return (
+      h.troopFactorAtZero +
+      ((h.troopFactorAtMax - h.troopFactorAtZero) * happiness) / 100
+    );
+  }
+
+  /** Ticks land must sit unintegrated before it can rebel, by happiness. */
+  rebellionUnintegratedTicks(happiness: number): number {
+    const h = HAPPINESS;
+    const mid = REBELLION.unintegratedTicks;
+    if (happiness <= h.base) {
+      return (
+        h.rebellionTicksAtZero +
+        Math.floor(((mid - h.rebellionTicksAtZero) * happiness) / h.base)
+      );
+    }
+    return (
+      mid +
+      Math.floor(
+        ((h.rebellionTicksAtMax - mid) * (happiness - h.base)) / (100 - h.base),
+      )
     );
   }
 
@@ -1178,11 +1280,14 @@ export class Config {
   }
 
   /** Smallest region that can rebel on a map with this many land tiles. */
-  rebellionMinTiles(landTiles: number): number {
-    return Math.max(
+  rebellionMinTiles(landTiles: number, happiness: number = 0): number {
+    const base = Math.max(
       1,
       Math.floor((landTiles * REBELLION.minSizePermille) / 1000),
     );
+    return happiness >= HAPPINESS.calmThreshold
+      ? Math.floor(base * HAPPINESS.calmMinSizeMultiplier)
+      : base;
   }
 
   /** Troops one mercenary hire adds. */
@@ -1293,6 +1398,8 @@ export class Config {
           assertNever(this._gameConfig.difficulty);
       }
     }
+
+    toAdd *= this.happinessTroopFactor(player.happiness());
 
     return Math.min(own + toAdd, max) - own;
   }

@@ -133,6 +133,7 @@ interface MinuteRow {
   ports: number;
   factories: number;
   cities: number;
+  farms: number;
   tradeShipsAtSea: number;
   trainsRunning: number;
 }
@@ -197,6 +198,7 @@ async function runNationGame(minutes: number): Promise<{
       ports: game.units(UnitType.Port).length,
       factories: game.units(UnitType.Factory).length,
       cities: game.units(UnitType.City).length,
+      farms: game.units(UnitType.Farm).length,
       tradeShipsAtSea: game.units(UnitType.TradeShip).length,
       trainsRunning: game.units(UnitType.Train).length,
     });

@@ -214,6 +214,7 @@ export enum UnitType {
   // binary wire format and snapshots stay stable.
   AntimatterBomb = "Antimatter Bomb",
   LandBomb = "Land Bomb",
+  Farm = "Farm",
 }
 
 export enum TrainType {
@@ -255,6 +256,7 @@ export const Structures = unitTypeGroup([
   UnitType.MissileSilo,
   UnitType.Port,
   UnitType.Factory,
+  UnitType.Farm,
 ] as const);
 
 export const BuildMenus = unitTypeGroup([
@@ -345,6 +347,8 @@ export interface UnitParamsMap {
   [UnitType.SAMLauncher]: Record<string, never>;
 
   [UnitType.City]: Record<string, never>;
+
+  [UnitType.Farm]: Record<string, never>;
 }
 
 // Type helper to get params type for a specific unit type
@@ -677,6 +681,12 @@ export interface Player {
   integrateTile(tile: TileRef): boolean;
   /** Tall economy: tiles administered at full value, from built city levels. */
   adminCapacity(): number;
+  /** 0..100, recomputed periodically (see HAPPINESS in Config). */
+  happiness(): number;
+  setHappiness(happiness: number): void;
+  /** Extra tiles/tick of empire-wide integration from structures. */
+  integrationBonus(): number;
+  setIntegrationBonus(bonus: number): void;
   /** Hired troops not yet spent; they disband at mercenaryExpiresAt(). */
   mercenaries(): number;
   mercenaryExpiresAt(): Tick;
@@ -726,6 +736,8 @@ export interface Player {
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
+  /** Sum of levels of this player's completed units of `type`. */
+  totalUnitLevels(type: UnitType): number;
   buildableUnits(
     tile: TileRef | null,
     units?: readonly PlayerBuildableUnitType[],
