@@ -650,6 +650,8 @@ export interface Player {
   clearDoomsdayClock(): void;
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
+  /** Most land this player has ever held. */
+  peakTiles(): number;
   /** Counter bumped on every ownership change of one of this player's tiles (also when its border set can change). */
   tileChangeVersion(): number;
 
@@ -900,6 +902,8 @@ export interface Game extends GameMap {
   // Game State
   ticks(): Tick;
   inSpawnPhase(): boolean;
+  /** Ticks since the spawn phase ended (0 during it). */
+  ticksSinceStart(): number;
   endSpawnPhase(): void;
   executeNextTick(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;

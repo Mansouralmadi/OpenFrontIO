@@ -138,6 +138,8 @@ Object.freeze(EMPTY_EMOJIS);
 
 export class PlayerImpl implements Player {
   public _lastTileChange: number = 0;
+  /** Most land ever held; remnant elimination compares against it. */
+  public _peakTiles: number = 0;
   // Bumped on every ownership change of one of this player's tiles (several
   // can happen within one tick, so the tick alone is not a cache key).
   public _tileChangeVersion: number = 0;
@@ -2030,6 +2032,10 @@ export class PlayerImpl implements Player {
     return this._tileChangeVersion;
   }
 
+  peakTiles(): number {
+    return this._peakTiles;
+  }
+
   lastTileChange(): Tick {
     return this._lastTileChange;
   }
@@ -2186,6 +2192,7 @@ export class PlayerImpl implements Player {
       info: playerInfoData(this.playerInfo),
       team: this._team,
       lastTileChange: this._lastTileChange,
+      peakTiles: this._peakTiles,
       tileChangeVersion: this._tileChangeVersion,
       random: w.random(this._pseudo_random),
       gold: this._gold,
@@ -2267,6 +2274,7 @@ export class PlayerImpl implements Player {
     this.playerInfo = r.game.findPlayerInfo(s.info.id) ?? newPlayerInfo(s.info);
     this._team = s.team;
     this._lastTileChange = s.lastTileChange;
+    this._peakTiles = s.peakTiles;
     this._tileChangeVersion = s.tileChangeVersion;
     this._pseudo_random = r.random(s.random);
     this._gold = s.gold;
@@ -2345,7 +2353,7 @@ export class PlayerImpl implements Player {
 
 export const PlayerSnapshot = snapshotType({
   name: "Player",
-  version: 6,
+  version: 7,
   migrations: {
     // v2: tall economy integration backlog; older games had none.
     1: (d) => ({ ...d, unintegratedTiles: 0 }),
@@ -2369,12 +2377,15 @@ export const PlayerSnapshot = snapshotType({
     // v6: happiness and the structure integration bonus (refreshed within
     // HAPPINESS.recomputeIntervalTicks).
     5: (d) => ({ ...d, happiness: 50, integrationBonus: 0 }),
+    // v7: peak land for remnant elimination; older games start counting now.
+    6: (d) => ({ ...d, peakTiles: 0 }),
   },
   schema: z.object({
     smallID: zInt(),
     info: PlayerInfoSchema,
     team: z.string().nullable(),
     lastTileChange: zInt(),
+    peakTiles: zInt(),
     tileChangeVersion: zInt(),
     random: zRandom(),
     gold: z.bigint(),

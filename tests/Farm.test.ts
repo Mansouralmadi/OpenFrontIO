@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
 import { refreshHappiness } from "../src/core/execution/Happiness";
 import { NationStructureBehavior } from "../src/core/execution/nation/NationStructureBehavior";
@@ -73,8 +74,30 @@ describe("Happiness", () => {
     expect(c.happiness(0, 0, 0)).toBe(50);
   });
 
+  test("the unintegrated penalty is off for 1 minute, then phases in over 3", async () => {
+    const { game } = await twoPlayers();
+    const c = game.config();
+    const min = 60 * 10;
+    expect(c.happiness(0, 1000, 1000, 0)).toBe(50);
+    expect(c.happiness(0, 1000, 1000, min)).toBe(50);
+    expect(c.happiness(0, 1000, 1000, min + 90 * 10)).toBe(30); // -40 * 1/2
+    expect(c.happiness(0, 1000, 1000, 4 * min)).toBe(10);
+    expect(c.happiness(0, 1000, 1000, 60 * min)).toBe(10);
+    // Farms count from the start
+    expect(c.happiness(1, 1000, 1000, 0)).toBe(56);
+  });
+
+  test("refresh: everyone starts at base happiness despite all-new land", async () => {
+    const { game, a } = await twoPlayers();
+    expect(game.ticksSinceStart()).toBeLessThan(60 * 10);
+    refreshHappiness(game, a);
+    expect(a.happiness()).toBe(50);
+  });
+
   test("refresh: rises with completed farm levels, falls with unintegrated share", async () => {
     const { game, a } = await twoPlayers({ infiniteGold: true });
+    // Well past the opening grace period
+    vi.spyOn(game, "ticksSinceStart").mockReturnValue(10 * 60 * 10);
     refreshHappiness(game, a);
     expect(a.happiness()).toBe(10); // all land unintegrated
     integrateAll(a);

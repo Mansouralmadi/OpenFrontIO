@@ -12,6 +12,7 @@ export function refreshHappiness(game: Game, player: Player): void {
       player.totalUnitLevels(UnitType.Farm),
       player.unintegratedTiles(),
       player.numTilesOwned(),
+      game.ticksSinceStart(),
     ),
   );
   player.setIntegrationBonus(integrationBonus(game, player));

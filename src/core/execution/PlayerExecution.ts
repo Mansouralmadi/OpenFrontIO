@@ -137,6 +137,8 @@ export class PlayerExecution implements Execution {
       }
     }
 
+    if (this.maybeEliminateRemnant(ticks)) return;
+
     if (
       ticks - this.lastCalc > this.ticksPerClusterCalc ||
       this.player.numTilesOwned() < 100
@@ -325,6 +327,125 @@ export class PlayerExecution implements Execution {
         )
       ) {
         this.removeCluster(cluster);
+      } else {
+        this.removeScrap(cluster);
+      }
+    }
+  }
+
+  /**
+   * A cut-off piece of our land too small to matter (nuke confetti, the
+   * crumbs of a lost war), with no coast to land boats on and nothing built,
+   * goes to the enemy around it, or back to unclaimed land if none borders it.
+   */
+  private removeScrap(cluster: readonly TileRef[]): void {
+    const first = cluster[0];
+    // The Doomsday Clock rots a doomed player's land into wasteland itself.
+    if (first === undefined || this.player.isDecaying()) return;
+    const map = this.map;
+    const me = this.player.smallID();
+    const limit = this.config.remnant().scrapMaxTiles;
+    const piece = this.ownPiece(first, limit + 1);
+    if (piece.length > limit) return;
+    // A coast (boat landings), the map edge or impassable terrain makes even a
+    // tiny piece defensible, as for the enclave checks.
+    for (const tile of piece) {
+      if (
+        map.ownerID(tile) !== me ||
+        map.isShore(tile) ||
+        map.isOnEdgeOfMap(tile)
+      ) {
+        return;
+      }
+      const n = map.neighbors4(tile, this.nbuf);
+      for (let j = 0; j < n; j++) {
+        if (map.isImpassable(this.nbuf[j])) return;
+      }
+    }
+    for (const unit of this.player.units()) {
+      if (Structures.has(unit.type()) && piece.includes(unit.tile())) return;
+    }
+    const capturing = this.getCapturingPlayer(piece);
+    if (capturing !== null) {
+      for (const attack of this.player.outgoingAttacks()) {
+        if (attack.isActive() && attack.target() === capturing) return;
+      }
+    }
+    this.handOver(piece, capturing);
+  }
+
+  /**
+   * A country down to a sliver of its peak land that has stopped changing
+   * (see REMNANT) is finished off: the enemy it borders most conquers it and
+   * takes the pieces touching its land; the rest goes back to unclaimed land.
+   */
+  private maybeEliminateRemnant(ticks: number): boolean {
+    const r = this.config.remnant();
+    const p = this.player;
+    if ((ticks + p.smallID()) % r.checkIntervalTicks !== 0) return false;
+    if (this.mg.ticksSinceStart() < r.graceTicks || p.isDecaying()) {
+      return false;
+    }
+    if (ticks - p.lastTileChange() < r.stagnantTicks) return false;
+    const tiles = p.numTilesOwned();
+    if (tiles > this.config.remnantMaxTiles(this.mg.numLandTiles())) {
+      return false;
+    }
+    if (tiles * 100 > p.peakTiles() * r.maxPercentOfPeak) return false;
+    if (p.outgoingAttacks().some((a) => a.isActive())) return false;
+    if (p.units(UnitType.TransportShip).length > 0) return false;
+
+    const all = Array.from(p.tiles()).sort((a, b) => a - b);
+    const heir = this.getCapturingPlayer(all);
+    if (heir !== null) this.mg.conquerPlayer(heir, p);
+    for (const tile of all) {
+      if (this.map.ownerID(tile) !== p.smallID()) continue;
+      this.handOver(this.ownPiece(tile, Infinity), heir);
+    }
+    return true;
+  }
+
+  // Our 4-connected territory around `start`, stopping after `limit` tiles.
+  private ownPiece(start: TileRef, limit: number): TileRef[] {
+    const map = this.map;
+    const me = this.player.smallID();
+    const state = this.traversalState();
+    const gen = bumpTraversalGeneration(state);
+    const visited = state.visited;
+    const piece: TileRef[] = [start];
+    visited[start] = gen;
+    for (let i = 0; i < piece.length && piece.length < limit; i++) {
+      const n = map.neighbors4(piece[i], this.nbuf);
+      for (let j = 0; j < n; j++) {
+        const t = this.nbuf[j];
+        if (visited[t] === gen || map.ownerID(t) !== me) continue;
+        visited[t] = gen;
+        piece.push(t);
+      }
+    }
+    return piece;
+  }
+
+  // Gives `piece` to `to` (settled) if it borders `to`'s land, else releases it.
+  private handOver(piece: readonly TileRef[], to: Player | null): void {
+    const map = this.map;
+    let touches = false;
+    if (to !== null) {
+      const them = to.smallID();
+      for (const tile of piece) {
+        const n = map.neighbors4(tile, this.nbuf);
+        for (let j = 0; j < n && !touches; j++) {
+          touches = map.ownerID(this.nbuf[j]) === them;
+        }
+        if (touches) break;
+      }
+    }
+    for (const tile of piece) {
+      if (touches && to !== null) {
+        to.conquer(tile);
+        to.integrateTile(tile);
+      } else {
+        this.player.relinquish(tile);
       }
     }
   }
@@ -556,6 +677,12 @@ export class PlayerExecution implements Execution {
       return;
     }
 
+    // A pocket we are fighting out of is a front, not a leftover: a boat
+    // landing on a river or lake bank is walled in the moment it lands.
+    for (const attack of this.player.outgoingAttacks()) {
+      if (attack.isActive() && attack.target() === capturing) return;
+    }
+
     const firstTile = cluster[0];
     if (firstTile === undefined) {
       return;
@@ -585,6 +712,8 @@ export class PlayerExecution implements Execution {
 
     for (const tile of tiles) {
       capturing.conquer(tile);
+      // Annexed scraps join the encloser settled, not as backlog.
+      capturing.integrateTile(tile);
     }
   }
 

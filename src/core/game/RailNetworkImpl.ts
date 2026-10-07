@@ -78,6 +78,9 @@ export class StationManagerImpl implements StationManager {
     for (const station of this.stations) {
       this.stationsById[station.id] = station;
     }
+    // Live, every id ever handed out keeps its slot (removed ones hold
+    // undefined), so the array spans nextId even when the newest station is gone.
+    if (s.nextId > 1) this.stationsById.length = s.nextId;
     this.nextId = s.nextId;
   }
 }

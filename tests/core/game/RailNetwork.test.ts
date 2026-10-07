@@ -49,6 +49,24 @@ describe("StationManagerImpl", () => {
     manager.removeStation(station);
     expect(manager.findStation(station.unit)).toBe(null);
   });
+
+  test("snapshot round trip keeps the id table when the newest station is gone", () => {
+    const stations = [1, 2, 3].map(createMockStation);
+    for (const s of stations) manager.addStation(s);
+    manager.removeStation(stations[2]);
+
+    const w = { station: (s: unknown) => stations.indexOf(s as never) };
+    const r = { station: (i: number) => stations[i] };
+    const restored = new StationManagerImpl();
+    restored.restoreSnapshot(manager.snapshot(w as never), r as never);
+
+    expect(restored.count()).toBe(manager.count());
+    expect(restored.getById(3)).toBeUndefined();
+    expect(restored.getById(2)).toBe(stations[1]);
+    const ids = (m: StationManagerImpl) =>
+      (m as unknown as { stationsById: unknown[] }).stationsById.length;
+    expect(ids(restored)).toBe(ids(manager));
+  });
 });
 
 describe("RailNetworkImpl", () => {

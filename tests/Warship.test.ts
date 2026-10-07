@@ -673,6 +673,34 @@ describe("Warship", () => {
     expect(warship.warshipState().state).toBe("patrolling");
   });
 
+  test("A landlocked port (earthquake, land bomb) doesn't crash a retreating warship", async () => {
+    game.config().warshipRetreatHealthPercent = () => 90;
+
+    const port = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 11),
+      {
+        patrolTile: game.ref(coastX + 1, 11),
+      },
+    );
+    game.addExecution(new WarshipExecution(warship));
+
+    // The coast rose around the port: it has no water component any more.
+    const getWaterComponent = game.getWaterComponent.bind(game);
+    vi.spyOn(game, "getWaterComponent").mockImplementation((tile) =>
+      tile === port.tile() ? null : getWaterComponent(tile),
+    );
+    vi.spyOn(game, "hasWaterComponent").mockImplementation(
+      (tile) => tile !== port.tile(),
+    );
+
+    game.executeNextTick();
+    warship.modifyHealth(-300);
+    expect(() => game.executeNextTick()).not.toThrow();
+    expect(warship.warshipState().state).toBe("patrolling");
+  });
+
   test("Low-health warship retreats AND fires at nearby enemy warship", async () => {
     game.config().warshipPortHealingBonusPerLevel = () => 0;
     game.config().warshipRetreatHealthPercent = () => 60;

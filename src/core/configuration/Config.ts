@@ -218,7 +218,10 @@ const FARM_MAX_COST = 500_000;
 // recomputeIntervalTicks (see Happiness.ts). base, + farms (perFarmLevel per
 // level for the first farmFullLevels levels, then perFarmLevelLate, capped at
 // farmMax), - unintegrated land (penaltyPerUnintegratedPercent per percent of
-// owned land that is unintegrated, capped at unintegratedMaxPenalty).
+// owned land that is unintegrated, capped at unintegratedMaxPenalty). Early
+// expansion is all new land, so the penalty is off for penaltyGraceTicks after
+// the spawn phase and then phases in linearly over penaltyRampTicks: everyone
+// starts at base.
 // Effects: troop growth x troopFactorAtZero..1..troopFactorAtMax (linear
 // over 0..50..100); a rebellion needs rebellionTicksAtZero..REBELLION
 // unintegratedTicks..rebellionTicksAtMax of unintegration (linear over
@@ -237,6 +240,8 @@ const HAPPINESS = {
   farmMax: 40,
   penaltyPerUnintegratedPercent: 0.6,
   unintegratedMaxPenalty: 40,
+  penaltyGraceTicks: 60 * 10,
+  penaltyRampTicks: 3 * 60 * 10,
   troopFactorAtZero: 0.5,
   troopFactorAtMax: 1.5,
   rebellionTicksAtZero: 30 * 10,
@@ -384,6 +389,26 @@ const MERCENARIES = {
   priceWindowTicks: 5 * 60 * 10,
   // Every hire (re)starts the contract for the whole pool.
   contractTicks: 2 * 60 * 10,
+};
+
+// Remnants: a country that lost most of its land and is down to scraps
+// (typically after a nuke) is finished off instead of surviving on a few
+// pixels. Every check runs per player every checkIntervalTicks (staggered).
+const REMNANT = {
+  checkIntervalTicks: 10,
+  // Not in the first minutes after the spawn phase.
+  graceTicks: 2 * 60 * 10,
+  // Its land hasn't changed for this long (not fighting back).
+  stagnantTicks: 30 * 10,
+  // It holds at most this share of its peak land...
+  maxPercentOfPeak: 25,
+  // ...and at most land / landDivisor tiles, clamped to [minTiles, maxTiles].
+  landDivisor: 4000,
+  minTiles: 20,
+  maxTiles: 400,
+  // Separately, any cut-off piece of a living country this small (no coast,
+  // no structure) is handed to the neighbor around it or released.
+  scrapMaxTiles: 16,
 };
 
 export class Config {
@@ -1201,8 +1226,17 @@ export class Config {
     return HAPPINESS;
   }
 
-  /** Happiness (0..100) from completed farm levels and the unintegrated share. */
-  happiness(farmLevels: number, unintegrated: number, tiles: number): number {
+  /**
+   * Happiness (0..100) from completed farm levels and the unintegrated share.
+   * `ticksSinceStart` (ticks since the spawn phase ended) phases the
+   * unintegrated penalty in; omitted, it applies in full.
+   */
+  happiness(
+    farmLevels: number,
+    unintegrated: number,
+    tiles: number,
+    ticksSinceStart: number = Infinity,
+  ): number {
     const h = HAPPINESS;
     const early = Math.min(farmLevels, h.farmFullLevels);
     const late = Math.max(farmLevels - h.farmFullLevels, 0);
@@ -1211,10 +1245,15 @@ export class Config {
       early * h.perFarmLevel + late * h.perFarmLevelLate,
     );
     const percent = tiles > 0 ? (unintegrated * 100) / tiles : 0;
-    const penalty = Math.min(
+    let penalty = Math.min(
       h.unintegratedMaxPenalty,
       Math.floor(percent * h.penaltyPerUnintegratedPercent),
     );
+    const ramped = ticksSinceStart - h.penaltyGraceTicks;
+    if (ramped < h.penaltyRampTicks) {
+      penalty =
+        ramped <= 0 ? 0 : Math.floor((penalty * ramped) / h.penaltyRampTicks);
+    }
     return within(h.base + farms - penalty, 0, 100);
   }
 
@@ -1281,6 +1320,20 @@ export class Config {
 
   rebellion(): typeof REBELLION {
     return REBELLION;
+  }
+
+  remnant(): typeof REMNANT {
+    return REMNANT;
+  }
+
+  /** Largest territory that can still be eliminated as a remnant. */
+  remnantMaxTiles(landTiles: number): number {
+    const r = REMNANT;
+    return within(
+      Math.floor(landTiles / r.landDivisor),
+      r.minTiles,
+      r.maxTiles,
+    );
   }
 
   /** Smallest region that can rebel on a map with this many land tiles. */

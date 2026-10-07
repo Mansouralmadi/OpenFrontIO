@@ -846,6 +846,9 @@ export class GameImpl implements Game {
     this._territoryVersion++;
     this._map.setOwnerID(tile, owner.smallID());
     owner._tiles.add(tile);
+    if (owner._tiles.size > owner._peakTiles) {
+      owner._peakTiles = owner._tiles.size;
+    }
     // Tall economy: land taken after spawning must integrate before it pays.
     // Integration goes oldest first, so it spreads from the core outward.
     const unintegrated = this.startTick !== null && this._config.integration();
@@ -1019,7 +1022,7 @@ export class GameImpl implements Game {
     );
   }
 
-  private ticksSinceStart(): number {
+  ticksSinceStart(): number {
     if (this.inSpawnPhase()) {
       return 0;
     }

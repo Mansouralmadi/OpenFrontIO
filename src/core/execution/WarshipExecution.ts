@@ -229,21 +229,15 @@ export class WarshipExecution implements Execution {
     }
 
     const warshipTile = this.warship.tile();
+    // Earthquakes and land bombs reshape coasts: a port can end up landlocked
+    // (no water component), and then it just isn't a destination.
     const warshipComponent = this.mg.getWaterComponent(warshipTile);
-    if (warshipComponent === null) {
-      throw new Error(`Warship at tile ${warshipTile} has no water component`);
-    }
+    if (warshipComponent === null) return undefined;
 
     const nearest = findMinimumBy(
       ports,
       (port) => this.mg.euclideanDistSquared(warshipTile, port.tile()),
-      (port) => {
-        const portComponent = this.mg.getWaterComponent(port.tile());
-        if (portComponent === null) {
-          throw new Error(`Port at tile ${port.tile()} has no water component`);
-        }
-        return portComponent === warshipComponent;
-      },
+      (port) => this.mg.hasWaterComponent(port.tile(), warshipComponent),
     );
 
     return nearest?.tile();
@@ -592,9 +586,7 @@ export class WarshipExecution implements Execution {
     const ports = this.warship.owner().units(UnitType.Port);
     const warshipTile = this.warship.tile();
     const warshipComponent = this.mg.getWaterComponent(warshipTile);
-    if (warshipComponent === null) {
-      throw new Error(`Warship at tile ${warshipTile} has no water component`);
-    }
+    if (warshipComponent === null) return undefined;
 
     let bestTile: TileRef | undefined = undefined;
     let bestDistance = Infinity;

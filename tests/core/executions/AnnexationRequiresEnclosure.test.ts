@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
+import { AttackExecution } from "../../../src/core/execution/AttackExecution";
 import { PlayerExecution } from "../../../src/core/execution/PlayerExecution";
 import {
   Game,
@@ -146,6 +147,72 @@ describe("annexation only takes territory that is actually enclosed", () => {
     expect(game.ownerID(shore)).toBe(attacker.smallID());
     // The main territory is untouched.
     expect(game.ownerID(game.ref(15, 15))).toBe(defender.smallID());
+  });
+
+  // The lake-shore pocket above, but the defender holds it as a fresh boat
+  // landing and is attacking out of it, or took it after the spawn phase.
+  function lakePocket(pocketAfterSpawn: boolean): TileRef {
+    for (let x = 0; x <= 30; x++) {
+      for (let y = 0; y <= 30; y++) defender.conquer(game.ref(x, y));
+    }
+    const inPocket = (x: number, y: number) =>
+      x >= 60 && x <= 64 && y >= 60 && y <= 64;
+    for (let x = 50; x <= 80; x++) {
+      for (let y = 50; y <= 80; y++) {
+        if (!inPocket(x, y)) attacker.conquer(game.ref(x, y));
+        else if (!pocketAfterSpawn) defender.conquer(game.ref(x, y));
+      }
+    }
+    game.endSpawnPhase();
+    if (pocketAfterSpawn) {
+      for (let x = 60; x <= 64; x++) {
+        for (let y = 60; y <= 64; y++) defender.conquer(game.ref(x, y));
+      }
+    }
+    for (let y = 61; y <= 63; y++) {
+      game.sinkLand(game.ref(58, y));
+      game.sinkLand(game.ref(59, y));
+    }
+    game.executeNextTick();
+    const shore = game.ref(60, 62);
+    expect(game.map().isOceanShore(shore)).toBe(false);
+    return shore;
+  }
+
+  test("a boat landing on a lake shore holds while it attacks out of it", () => {
+    const shore = lakePocket(false);
+    attacker.setTroops(1_000_000);
+    defender.setTroops(5_000_000);
+    // Launched from the pocket's edge facing the attacker, as a landing is
+    const attack = new AttackExecution(
+      4_000_000,
+      defender,
+      attacker.id(),
+      game.ref(62, 60),
+      false,
+    );
+    game.addExecution(new PlayerExecution(defender), attack);
+    for (let i = 0; i < 25; i++) game.executeNextTick();
+    defender.conquer(game.ref(31, 0));
+    for (let i = 0; i < 45; i++) game.executeNextTick();
+
+    expect(attack.isActive()).toBe(true);
+    expect(game.ownerID(shore)).toBe(defender.smallID());
+    expect(game.ownerID(game.ref(62, 62))).toBe(defender.smallID());
+  });
+
+  test("annexed pockets join the encloser integrated", () => {
+    lakePocket(true);
+    expect(game.isUnintegrated(game.ref(62, 62))).toBe(true);
+    const attackerBacklog = attacker.unintegratedTiles();
+    game.addExecution(new PlayerExecution(defender));
+    for (let i = 0; i < 25; i++) game.executeNextTick();
+    defender.conquer(game.ref(31, 0));
+    for (let i = 0; i < 45; i++) game.executeNextTick();
+
+    expect(game.ownerID(game.ref(62, 62))).toBe(attacker.smallID());
+    expect(game.isUnintegrated(game.ref(62, 62))).toBe(false);
+    expect(attacker.unintegratedTiles()).toBe(attackerBacklog);
   });
 
   test("a doughnut empire where the inner hole has more border tiles than the outer perimeter is not annexed", () => {

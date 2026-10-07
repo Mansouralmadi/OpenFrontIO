@@ -168,7 +168,11 @@ describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
       if (Object.keys(overrides).length > 0) return; // checked once, on FFA
       // Runs during the spawn phase and finishes inside init, so it is never
       // alive at a tick boundary. BasicExecutions.test.ts covers it directly.
-      const neverStored = new Set(["Pause"]);
+      // TradeShip: whether AI trade ever sails in this scripted game hangs on
+      // who embargoes whom (by tick 2400 nearly everyone does), so it comes
+      // and goes with any balance change. MovingExecutions.test.ts round-trips
+      // a TradeShipExecution directly.
+      const neverStored = new Set(["Pause", "TradeShip"]);
       const missing = EXECUTION_SNAPSHOT_TYPES.map((t) => t.name).filter(
         (name) => !reference.execTypes.has(name) && !neverStored.has(name),
       );
