@@ -351,7 +351,7 @@ describe("Land bomb", () => {
     expect(game.numLandTiles()).toBe(landBefore);
   }, 60_000);
 
-  test("a single SAM hit brings it down", async () => {
+  test("SAMs cannot intercept it", async () => {
     const game = await setup(
       "plains",
       { infiniteGold: true, instantBuild: true },
@@ -372,7 +372,7 @@ describe("Land bomb", () => {
       new SAMMissileExecution(game.ref(50, 50), b, sam, bomb, target),
     );
     executeTicks(game, 3);
-    expect(bomb.isActive()).toBe(false);
+    expect(bomb.isActive()).toBe(true);
   });
 
   test("whole detonation is deterministic", async () => {

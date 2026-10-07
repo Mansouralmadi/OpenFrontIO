@@ -91,13 +91,37 @@ export class NukeExecution implements Execution {
     const inner2 = magnitude.inner * magnitude.inner;
     const outer2 = magnitude.outer * magnitude.outer;
 
-    if (this.mg.config().waterNukes()) {
+    // The antimatter bomb always uses the solid, irregular crater: the
+    // 50%-chance outer ring below is ~50 tiles wide at its size and left
+    // enemy pixels scattered all over the rim.
+    if (
+      this.mg.config().waterNukes() ||
+      this.nuke.type() === UnitType.AntimatterBomb
+    ) {
       this.tilesToDestroyCache = waterCraterTiles(
         this.mg,
         this.dst,
         magnitude,
         this.mg.ticks() ^ Math.imul(this.dst, 0x9e3779b1),
       );
+      if (this.nuke.type() === UnitType.AntimatterBomb) {
+        // Everything inside the inner radius goes, even where the
+        // irregular edge dips inward; only the rim beyond it is ragged, and
+        // never past the outer radius the launch preview shows.
+        for (const t of this.tilesToDestroyCache) {
+          if (this.mg.euclideanDistSquared(this.dst, t) > outer2) {
+            this.tilesToDestroyCache.delete(t);
+          }
+        }
+        for (const t of this.mg.bfs(
+          this.dst,
+          (_, n: TileRef) =>
+            this.mg.euclideanDistSquared(this.dst, n) <= inner2 &&
+            !this.mg.isImpassable(n),
+        )) {
+          this.tilesToDestroyCache.add(t);
+        }
+      }
     } else {
       this.tilesToDestroyCache = this.mg.bfs(this.dst, (_, n: TileRef) => {
         const d2 = this.mg?.euclideanDistSquared(this.dst, n) ?? 0;
