@@ -377,7 +377,9 @@ export class AttackExecution implements Execution {
               isTraitor: defender.isTraitor(),
               isDisconnectedTeammate:
                 defender.isDisconnected() && this._owner.isOnSameTeam(defender),
+              fervor: defender.fervorUntil() > this.mg.ticks(),
             },
+      tileUnintegrated: defender !== null && this.map.isUnintegrated(tile),
       defenderHasDefensePost,
       falloutRatio: this.mg.hasFallout(tile)
         ? this.mg.numTilesWithFallout() / this.mg.numLandTiles()

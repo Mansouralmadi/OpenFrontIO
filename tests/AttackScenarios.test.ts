@@ -126,6 +126,10 @@ async function runScenario(s: Scenario): Promise<Metrics> {
     }
   }
   if (!attackerFirst) conquerRect(game, attacker, s.attacker.rect);
+  // Settled land: unintegrated (freshly conquered) tiles are cheaper to
+  // take, which these scenarios don't measure (see tests/Unrest.test.ts).
+  attacker.integrateTiles(Number.MAX_SAFE_INTEGER);
+  defender.integrateTiles(Number.MAX_SAFE_INTEGER);
   attacker.setTroops(s.attacker.troops);
   if (s.attacker.traitor) attacker.markTraitor();
 

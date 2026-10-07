@@ -7,7 +7,9 @@ import type { GameView } from "../../../../src/client/view";
 import { EventBus } from "../../../../src/core/EventBus";
 import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
 
-vi.mock("../../../../src/client/Utils", () => ({
+vi.mock("../../../../src/client/Utils", async (importOriginal) => ({
+  // Real helpers (renderDuration, renderNumber, ...) for the game summary.
+  ...(await importOriginal<object>()),
   translateText: vi.fn((key: string) => key),
   getGamesPlayed: vi.fn(() => 10),
   isInIframe: vi.fn(() => false),

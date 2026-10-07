@@ -19,7 +19,12 @@
  */
 
 import type { Config } from "../../core/configuration/Config";
-import type { PlayerType, Team, UnitType } from "../../core/game/Game";
+import type {
+  PlayerType,
+  Team,
+  UnitType,
+  UnrestWarning,
+} from "../../core/game/Game";
 import type { TileRef } from "../../core/game/GameMap";
 import { GameUpdateType } from "../../core/game/GameUpdates";
 import { OWNER_MASK } from "../render/gl/utils/TileCodec";
@@ -219,6 +224,15 @@ export class ReplayPlayerView {
   }
   happiness(): number {
     return this.state?.happiness ?? 50;
+  }
+  fervorUntil(): number {
+    return this.state?.fervorUntil ?? 0;
+  }
+  unrest(): UnrestWarning | null {
+    const s = this.state;
+    return s && s.unrestTiles > 0
+      ? { tiles: s.unrestTiles, tick: s.unrestTick, tile: s.unrestTile }
+      : null;
   }
   adminCapacity(): number {
     const config = this.game.config();

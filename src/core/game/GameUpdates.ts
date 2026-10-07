@@ -250,6 +250,12 @@ export interface PlayerUpdate {
   recentMercenaryHires?: number;
   /** 0..100 (see HAPPINESS in Config). */
   happiness?: number;
+  /** Tick revolutionary fervor ends (see REBELLION in Config). */
+  fervorUntil?: number;
+  /** Region about to rebel: its tiles (0 = none), estimated tick, center. */
+  unrestTiles?: number;
+  unrestTick?: number;
+  unrestTile?: number;
   gold?: Gold;
   /** Cumulative ship-trade revenue (changes only on arrivals, so it diffs). */
   tradeGold?: Gold;

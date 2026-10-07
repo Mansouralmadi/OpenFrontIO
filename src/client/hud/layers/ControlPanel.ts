@@ -5,7 +5,13 @@ import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { ClientID } from "../../../core/Schemas";
 import { Config } from "../../../core/configuration/Config";
-import { GameMode, GameType, Gold } from "../../../core/game/Game";
+import {
+  GameMode,
+  GameType,
+  Gold,
+  UnitType,
+  UnrestWarning,
+} from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import {
@@ -14,6 +20,7 @@ import {
 } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { AttackRatioEvent } from "../../InputHandler";
+import { GoToPositionEvent } from "../../TransformHandler";
 import { SendHireMercenariesIntentEvent } from "../../Transport";
 import { UIState } from "../../UIState";
 import {
@@ -71,7 +78,12 @@ export class ControlPanel extends LitElement implements Controller {
   // Mercenaries: unspent pool, seconds left on the contract, next hire.
   @state()
   private _mercenaries = 0;
-  private _happiness = 50;
+  // Happiness widget: the sim's terms (Config.happinessBreakdown) and the
+  // region about to rebel, if any.
+  private _happiness: ReturnType<Config["happinessBreakdown"]> | null = null;
+  @state()
+  private _happinessOpen = false;
+  private _unrest: UnrestWarning | null = null;
   @state()
   private _mercenarySecondsLeft = 0;
   @state()
@@ -168,7 +180,13 @@ export class ControlPanel extends LitElement implements Controller {
     this._unintegrated = player.unintegratedTiles();
     this._capacity = player.adminCapacity();
     this._mercenaries = player.mercenaries();
-    this._happiness = player.happiness();
+    this._happiness = config.happinessBreakdown(
+      player.totalUnitLevels(UnitType.Farm),
+      player.unintegratedTiles(),
+      player.numTilesOwned(),
+      this.game.ticksSinceStart(),
+    );
+    this._unrest = player.unrest();
     this._mercenarySecondsLeft = Math.max(
       0,
       Math.ceil((player.mercenaryExpiresAt() - this.game.ticks()) / 10),
@@ -555,26 +573,129 @@ export class ControlPanel extends LitElement implements Controller {
             capacity: renderNumber(this._capacity),
           })}</span
         >
-        <span
-          class=${this._happiness < 30
-            ? "text-red-400"
-            : this._happiness > 70
-              ? "text-green-400"
-              : "text-yellow-300"}
-          title=${translateText("control_panel.happiness_tooltip")}
-          >${translateText("control_panel.happiness", {
-            value: this._happiness,
-          })}</span
-        >
+        ${this.renderHappiness()}
         ${this._unintegrated > 0
           ? html`<span
+              title=${translateText("control_panel.integrating_tooltip")}
               >${translateText("control_panel.integrating", {
                 tiles: renderNumber(this._unintegrated),
               })}</span
             >`
           : ""}
       </div>
-      ${this.renderMercenaries()}
+      ${this.renderUnrest()} ${this.renderMercenaries()}
+    `;
+  }
+
+  private renderHappiness() {
+    const b = this._happiness;
+    if (b === null) return "";
+    const config = this.game.config();
+    const v = b.total;
+    const [face, text, bar] =
+      v < 30
+        ? ["😠", "text-red-400", "bg-red-500"]
+        : v < 50
+          ? ["😟", "text-yellow-300", "bg-yellow-400"]
+          : v <= 70
+            ? ["🙂", "text-yellow-300", "bg-yellow-400"]
+            : ["😄", "text-green-400", "bg-green-500"];
+    const row = (label: string, value: string, cls = "") =>
+      html`<div class="flex justify-between gap-3 ${cls}">
+        <span>${label}</span><span class="tabular-nums">${value}</span>
+      </div>`;
+    return html`
+      <div class="relative group">
+        <button
+          class="flex items-center gap-1 ${text}"
+          aria-label=${translateText("control_panel.happiness", { value: v })}
+          @click=${() => (this._happinessOpen = !this._happinessOpen)}
+        >
+          <span aria-hidden="true">${face}</span>
+          <span
+            class="w-10 h-1.5 rounded-full bg-gray-700 overflow-hidden"
+            aria-hidden="true"
+            ><span class="block h-full ${bar}" style="width: ${v}%"></span
+          ></span>
+          <span class="tabular-nums font-bold">${v}</span>
+        </button>
+        <div
+          class="${this._happinessOpen
+            ? "block"
+            : "hidden"} group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-50 w-60 max-w-[90vw] p-2 rounded-md border border-gray-600 bg-gray-900/95 text-gray-200 text-xs shadow-lg"
+        >
+          <div class="font-bold mb-1 ${text}">
+            ${face} ${translateText("control_panel.happiness", { value: v })}
+          </div>
+          ${row(translateText("control_panel.happiness_base"), `${b.base}`)}
+          ${row(
+            translateText("control_panel.happiness_farms"),
+            `+${b.farms}`,
+            "text-green-400",
+          )}
+          ${row(
+            translateText("control_panel.happiness_unintegrated"),
+            `−${b.penalty}`,
+            b.penalty > 0 ? "text-red-400" : "",
+          )}
+          ${b.ramping && b.fullPenalty > 0
+            ? html`<div class="text-gray-400 pl-2">
+                ${translateText("control_panel.happiness_ramping", {
+                  full: b.fullPenalty,
+                })}
+              </div>`
+            : ""}
+          <div class="border-t border-gray-600 my-1"></div>
+          ${row(
+            translateText("control_panel.happiness_total"),
+            `${v}`,
+            `font-bold ${text}`,
+          )}
+          <div class="mt-1 text-gray-300">
+            ${translateText("control_panel.happiness_troop_growth", {
+              factor: config.happinessTroopFactor(v).toFixed(2),
+            })}
+          </div>
+          <div class="text-gray-300">
+            ${translateText("control_panel.happiness_rebels_after", {
+              seconds: Math.round(config.rebellionUnintegratedTicks(v) / 10),
+            })}
+          </div>
+          <div class="mt-1 text-gray-400">
+            ${translateText("control_panel.happiness_tooltip")}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderUnrest() {
+    const u = this._unrest;
+    if (u === null) return "";
+    const s = Math.max(0, Math.ceil((u.tick - this.game.ticks()) / 10));
+    const time = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    return html`
+      <div
+        class="flex justify-between items-center gap-2 px-1.5 py-0.5 mb-1 rounded-md border border-red-500/60 bg-red-500/10 text-xs text-red-300"
+        translate="no"
+      >
+        <span
+          ><span class="animate-pulse" aria-hidden="true">⚠</span>
+          ${translateText("control_panel.unrest", {
+            tiles: renderNumber(u.tiles),
+            time,
+          })}</span
+        >
+        <button
+          class="px-2 py-0.5 rounded border border-red-400/50 hover:bg-red-400/20"
+          @click=${() =>
+            this.eventBus.emit(
+              new GoToPositionEvent(this.game.x(u.tile), this.game.y(u.tile)),
+            )}
+        >
+          ${translateText("events_display.focus")}
+        </button>
+      </div>
     `;
   }
 

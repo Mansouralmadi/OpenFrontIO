@@ -104,19 +104,101 @@ export class RebellionExecution implements Execution {
       samples.splice(0, keep);
       old -= keep;
     }
-    if (old < 0) return;
-
-    if (ticks - this.startTick < cfg.graceTicks) return;
-    if (ticks < watch.cooldownUntil) return;
     const minTiles = config.rebellionMinTiles(
       this.mg.numLandTiles(),
       happiness,
     );
-    if (p.unintegratedTiles() < minTiles) return;
-    const region = this.findRegion(p, samples[old + 1], minTiles);
-    if (region === null) return;
-    this.rebel(p, region);
-    watch.cooldownUntil = ticks + cfg.cooldownTicks;
+    if (
+      old >= 0 &&
+      ticks - this.startTick >= cfg.graceTicks &&
+      ticks >= watch.cooldownUntil &&
+      p.unintegratedTiles() >= minTiles
+    ) {
+      const region = this.findRegion(p, samples[old + 1], minTiles);
+      if (region !== null) {
+        this.rebel(p, region);
+        watch.cooldownUntil = ticks + cfg.cooldownTicks;
+        p.setUnrest(null);
+        return;
+      }
+    }
+    this.warn(p, ticks, watch, need, minTiles);
+  }
+
+  /**
+   * Sets p's unrest warning: the region that would rebel first, if that is
+   * within the warning window. Each sample (tick, queue end) makes the tiles
+   * queued before it eligible at tick + need, so the oldest sample that
+   * yields a region gives the region and its ETA (the next check from then).
+   */
+  private warn(
+    p: Player,
+    ticks: number,
+    watch: Watch,
+    need: number,
+    minTiles: number,
+  ): void {
+    const cfg = this.mg.config().rebellion();
+    const window = Math.max(
+      cfg.warnTicks,
+      Math.floor(need * cfg.warnShareOfDelay),
+    );
+    const earliest = Math.max(
+      this.startTick + cfg.graceTicks,
+      watch.cooldownUntil,
+    );
+    const samples = watch.samples;
+    let last = -1;
+    for (let i = 0; i < samples.length; i += 2) {
+      if (Math.max(samples[i] + need, earliest) <= ticks + window) last = i;
+    }
+    let found: { region: TileRef[]; at: number } | null = null;
+    // More candidates never shrink a cluster, so if the newest sample in the
+    // window yields nothing, no older one does.
+    // ponytail: linear scan after that gate (<= window / checkInterval + 1
+    // findRegion calls, only while a warning is live); binary search if hot.
+    if (
+      last >= 0 &&
+      p.unintegratedTiles() >= minTiles &&
+      this.findRegion(p, samples[last + 1], minTiles) !== null
+    ) {
+      for (let i = 0; i <= last && found === null; i += 2) {
+        const region = this.findRegion(p, samples[i + 1], minTiles);
+        if (region !== null) {
+          found = { region, at: Math.max(samples[i] + need, earliest) };
+        }
+      }
+    }
+    if (found === null) {
+      p.setUnrest(null);
+      return;
+    }
+    const interval = cfg.checkIntervalTicks;
+    const wait = Math.max(0, found.at - ticks);
+    const tick = ticks + Math.ceil(wait / interval) * interval;
+    const mg = this.mg;
+    let sx = 0;
+    let sy = 0;
+    for (const t of found.region) {
+      sx += mg.x(t);
+      sy += mg.y(t);
+    }
+    const n = found.region.length;
+    const firstWarning = p.unrest() === null;
+    p.setUnrest({
+      tiles: n,
+      tick,
+      tile: mg.ref(Math.floor(sx / n), Math.floor(sy / n)),
+    });
+    if (firstWarning) {
+      mg.displayMessage(
+        "events_display.unrest_warning",
+        MessageType.ATTACK_FAILED,
+        p.id(),
+        undefined,
+        { tiles: n, seconds: Math.ceil((tick - ticks) / 10) },
+      );
+    }
   }
 
   /**
@@ -262,8 +344,14 @@ export class RebellionExecution implements Execution {
     const info = new PlayerInfo(name, PlayerType.Nation, null, id);
     const rebel = mg.addPlayer(info);
 
-    const troops = Math.floor(
-      (owner.troops() * region.length) / owner.numTilesOwned(),
+    const cfg = mg.config().rebellion();
+    // A bigger-than-proportional share, but the owner keeps a floor.
+    const troops = Math.min(
+      Math.floor(
+        (owner.troops() * region.length * cfg.rebelTroopMultiplier) /
+          owner.numTilesOwned(),
+      ),
+      Math.floor(owner.troops() * (1 - cfg.ownerKeepsTroopShare)),
     );
     for (const t of region) rebel.conquer(t);
     // The rebels already run their land.
@@ -271,6 +359,7 @@ export class RebellionExecution implements Execution {
     rebel.setSpawnTile(region[0]);
     rebel.removeTroops(rebel.troops());
     rebel.addTroops(owner.removeTroops(troops));
+    rebel.setFervorUntil(mg.ticks() + cfg.fervorTicks);
     rebel.updateRelation(owner, -200);
     owner.updateRelation(rebel, -200);
 

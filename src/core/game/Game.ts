@@ -630,6 +630,15 @@ export interface DisconnectSnapshot {
   wasAlive: boolean;
 }
 
+/** A region of a player's land about to rebel. */
+export interface UnrestWarning {
+  tiles: number;
+  /** Estimated tick it rebels. */
+  tick: Tick;
+  /** Near the region's center. */
+  tile: TileRef;
+}
+
 export interface Player {
   // Basic Info
   smallID(): number;
@@ -697,6 +706,12 @@ export interface Player {
   /** Extra tiles/tick of empire-wide integration from structures. */
   integrationBonus(): number;
   setIntegrationBonus(bonus: number): void;
+  /** Tick revolutionary fervor (fresh rebels' defense bonus) ends. */
+  fervorUntil(): Tick;
+  setFervorUntil(tick: Tick): void;
+  /** The region closest to rebelling, when one is about to (RebellionExecution). */
+  unrest(): UnrestWarning | null;
+  setUnrest(unrest: UnrestWarning | null): void;
   /** Hired troops not yet spent; they disband at mercenaryExpiresAt(). */
   mercenaries(): number;
   mercenaryExpiresAt(): Tick;

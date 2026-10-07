@@ -53,6 +53,10 @@ export function diffPlayerUpdate(
     prev.mercenaryExpiresAt === next.mercenaryExpiresAt &&
     prev.recentMercenaryHires === next.recentMercenaryHires &&
     prev.happiness === next.happiness &&
+    prev.fervorUntil === next.fervorUntil &&
+    prev.unrestTiles === next.unrestTiles &&
+    prev.unrestTick === next.unrestTick &&
+    prev.unrestTile === next.unrestTile &&
     prev.tradeGold === next.tradeGold &&
     prev.trainGold === next.trainGold &&
     prev.piracyGold === next.piracyGold &&
@@ -120,6 +124,10 @@ export function diffPlayerUpdate(
     prev.recentMercenaryHires === next.recentMercenaryHires,
   );
   setIfDifferent("happiness", prev.happiness === next.happiness);
+  setIfDifferent("fervorUntil", prev.fervorUntil === next.fervorUntil);
+  setIfDifferent("unrestTiles", prev.unrestTiles === next.unrestTiles);
+  setIfDifferent("unrestTick", prev.unrestTick === next.unrestTick);
+  setIfDifferent("unrestTile", prev.unrestTile === next.unrestTile);
   setIfDifferent("tradeGold", prev.tradeGold === next.tradeGold);
   setIfDifferent("trainGold", prev.trainGold === next.trainGold);
   setIfDifferent("piracyGold", prev.piracyGold === next.piracyGold);
@@ -207,6 +215,10 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
     target.recentMercenaryHires = pu.recentMercenaryHires;
   }
   if (pu.happiness !== undefined) target.happiness = pu.happiness;
+  if (pu.fervorUntil !== undefined) target.fervorUntil = pu.fervorUntil;
+  if (pu.unrestTiles !== undefined) target.unrestTiles = pu.unrestTiles;
+  if (pu.unrestTick !== undefined) target.unrestTick = pu.unrestTick;
+  if (pu.unrestTile !== undefined) target.unrestTile = pu.unrestTile;
   if (pu.gold !== undefined) target.gold = Number(pu.gold);
   if (pu.tradeGold !== undefined) target.tradeGold = Number(pu.tradeGold);
   if (pu.trainGold !== undefined) target.trainGold = Number(pu.trainGold);

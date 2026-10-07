@@ -106,7 +106,11 @@ export interface AttackLogicInput {
     isTraitor: boolean;
     /** Defender is disconnected and on the attacker's team. */
     isDisconnectedTeammate: boolean;
+    /** Defender rebelled recently (revolutionary fervor). */
+    fervor?: boolean;
   } | null;
+  /** The tile is the defender's unintegrated land. */
+  tileUnintegrated?: boolean;
   /** A defense post owned by the defender is in range of the tile. */
   defenderHasDefensePost: boolean;
   /** Fraction of land tiles with fallout, or null if the tile has no fallout. */
@@ -158,6 +162,16 @@ const SPEED_COST_DIVISOR = 8.55;
 // sub-parity floor on the ratio curve, an overwhelming push lands ~18%
 // faster for a small attacker, ~20% at the 300k midpoint, ~25% for giants.
 const LARGE_ATTACKER_SPEED_DEPTH = 0.73;
+// Unrest (multiply onto terrain, defense post and fallout modifiers):
+// - Unintegrated defender tiles (fresh conquests) are easier to take, so
+//   hitting an enemy's new land beats hitting its core: attacker losses
+//   x0.75, conquest x1.25 faster (tile cost x0.8).
+// - Revolutionary fervor (REBELLION.fervorTicks after a rebellion): the
+//   rebels' land costs the attacker x1.5 troops and falls at x0.75 speed.
+const UNINTEGRATED_ATTACK_LOSS_MULT = 0.75;
+const UNINTEGRATED_ATTACK_COST_MULT = 0.8;
+const FERVOR_ATTACK_LOSS_MULT = 1.5;
+const FERVOR_ATTACK_COST_MULT = 4 / 3;
 
 /**
  * Logistic in log(tiles): ~1 for small territories, easing down to
@@ -379,6 +393,17 @@ const REBELLION = {
   // A rebellion takes at most this share of the owner's unintegrated land
   // (but never less than the minimum size).
   maxShareOfUnintegrated: 0.5,
+  // Rebels take this multiple of the owner's troops-per-tile share for their
+  // region, but the owner always keeps ownerKeepsTroopShare of its troops.
+  rebelTroopMultiplier: 1.5,
+  ownerKeepsTroopShare: 0.3,
+  // Revolutionary fervor: fresh rebels defend harder for this long (see
+  // FERVOR_ATTACK_* above).
+  fervorTicks: 3 * 60 * 10,
+  // Unrest warning: the owner is told about the region closest to rebelling
+  // once it is within max(warnTicks, warnShareOfDelay x the rebellion delay).
+  warnTicks: 30 * 10,
+  warnShareOfDelay: 0.5,
 };
 
 // Mercenaries: gold buys a temporary batch of troops above the troop cap.
@@ -1089,6 +1114,15 @@ export class Config {
       };
     }
 
+    if (input.tileUnintegrated) {
+      mag *= UNINTEGRATED_ATTACK_LOSS_MULT;
+      tileCost *= UNINTEGRATED_ATTACK_COST_MULT;
+    }
+    if (defender.fervor) {
+      mag *= FERVOR_ATTACK_LOSS_MULT;
+      tileCost *= FERVOR_ATTACK_COST_MULT;
+    }
+
     if (defender.isDisconnectedTeammate) {
       // No troop loss if defender is disconnected and on same team
       mag = 0;
@@ -1241,6 +1275,32 @@ export class Config {
     tiles: number,
     ticksSinceStart: number = Infinity,
   ): number {
+    return this.happinessBreakdown(
+      farmLevels,
+      unintegrated,
+      tiles,
+      ticksSinceStart,
+    ).total;
+  }
+
+  /**
+   * happiness() term by term (the HUD shows it): total = within(base + farms
+   * - penalty, 0, 100). `ramping` while the penalty is still phasing in
+   * (`penalty` is then a share of `fullPenalty`).
+   */
+  happinessBreakdown(
+    farmLevels: number,
+    unintegrated: number,
+    tiles: number,
+    ticksSinceStart: number = Infinity,
+  ): {
+    base: number;
+    farms: number;
+    penalty: number;
+    fullPenalty: number;
+    ramping: boolean;
+    total: number;
+  } {
     const h = HAPPINESS;
     const early = Math.min(farmLevels, h.farmFullLevels);
     const late = Math.max(farmLevels - h.farmFullLevels, 0);
@@ -1248,16 +1308,25 @@ export class Config {
       Math.min(h.farmMax, early * h.perFarmLevel + late * h.perFarmLevelLate),
     );
     const percent = tiles > 0 ? (unintegrated * 100) / tiles : 0;
-    let penalty = Math.min(
+    const fullPenalty = Math.min(
       h.unintegratedMaxPenalty,
       Math.floor(percent * h.penaltyPerUnintegratedPercent),
     );
+    let penalty = fullPenalty;
     const ramped = ticksSinceStart - h.penaltyGraceTicks;
-    if (ramped < h.penaltyRampTicks) {
+    const ramping = ramped < h.penaltyRampTicks;
+    if (ramping) {
       penalty =
         ramped <= 0 ? 0 : Math.floor((penalty * ramped) / h.penaltyRampTicks);
     }
-    return within(h.base + farms - penalty, 0, 100);
+    return {
+      base: h.base,
+      farms,
+      penalty,
+      fullPenalty,
+      ramping,
+      total: within(h.base + farms - penalty, 0, 100),
+    };
   }
 
   /** Troop growth multiplier: 0.5 at 0 happiness, 1 at 50, 1.5 at 100. */
