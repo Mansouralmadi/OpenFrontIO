@@ -510,7 +510,10 @@ export class PlayerExecution implements Execution {
     const mySmallID = this.player.smallID();
     for (let j = 0; j < cluster.length; j++) {
       const tr = cluster[j];
-      if (map.isShore(tr) || map.isOnEdgeOfMap(tr)) {
+      // Only the ocean coast protects a cut-off pocket (as in
+      // surroundedBySamePlayer): river and lake banks don't, or generated
+      // maps with water everywhere would never clean up enclaves.
+      if (map.isOceanShore(tr) || map.isOnEdgeOfMap(tr)) {
         return false;
       }
       const numNeighbors = map.neighbors4(tr, this.nbuf);
@@ -624,8 +627,9 @@ export class PlayerExecution implements Execution {
           continue;
         }
         if (ownerId === 0 && !map.isLand(n)) {
-          // Open water is a way out.
-          return false;
+          // Open sea is a way out; a lake or river is just part of the wall.
+          if (map.isOcean(n)) return false;
+          continue;
         }
         visited[n] = gen;
         stack.push(n);

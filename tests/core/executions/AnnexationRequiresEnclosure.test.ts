@@ -111,6 +111,43 @@ describe("annexation only takes territory that is actually enclosed", () => {
     expect(attacker.numTilesOwned()).toBe(attackerTilesBefore + pocketSize);
   });
 
+  test("a cut-off pocket on a lake shore is still annexed (only ocean protects)", () => {
+    // Iron's generated maps have rivers and lakes everywhere. A pocket only
+    // escapes annexation on the ocean coast; a lake or river bank used to
+    // protect it too, so enclaves along water were never cleaned up.
+    for (let x = 0; x <= 30; x++) {
+      for (let y = 0; y <= 30; y++) defender.conquer(game.ref(x, y));
+    }
+    for (let x = 50; x <= 80; x++) {
+      for (let y = 50; y <= 80; y++) {
+        const inPocket = x >= 60 && x <= 64 && y >= 60 && y <= 64;
+        (inPocket ? defender : attacker).conquer(game.ref(x, y));
+      }
+    }
+    game.endSpawnPhase();
+    // A small lake on the pocket's west side (not connected to any ocean).
+    for (let y = 61; y <= 63; y++) {
+      game.sinkLand(game.ref(58, y));
+      game.sinkLand(game.ref(59, y));
+    }
+    game.executeNextTick();
+    const shore = game.ref(60, 62);
+    expect(game.map().isShore(shore)).toBe(true);
+    expect(game.map().isOceanShore(shore)).toBe(false);
+
+    game.addExecution(new PlayerExecution(defender));
+    // The check runs after the owner's territory changes, and its first run
+    // is staggered up to 20 ticks out, so change territory after that.
+    for (let i = 0; i < 25; i++) game.executeNextTick();
+    defender.conquer(game.ref(31, 0));
+    for (let i = 0; i < 45; i++) game.executeNextTick();
+
+    expect(game.ownerID(game.ref(62, 62))).toBe(attacker.smallID());
+    expect(game.ownerID(shore)).toBe(attacker.smallID());
+    // The main territory is untouched.
+    expect(game.ownerID(game.ref(15, 15))).toBe(defender.smallID());
+  });
+
   test("a doughnut empire where the inner hole has more border tiles than the outer perimeter is not annexed", () => {
     // Defender holds a ring of territory with an inner hole.
     // Outer perimeter: (30,30) to (70,70) -> perimeter ~ 160 tiles.

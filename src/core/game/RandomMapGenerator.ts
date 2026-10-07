@@ -359,6 +359,8 @@ export interface RawTerrain {
   height: number;
   type: Uint8Array; // WATER | LAND
   mag: Uint8Array; // land elevation 0–30
+  /** Rivers and lakes (water carved out of land): never flagged ocean. */
+  fresh?: Uint8Array;
 }
 
 /**
@@ -379,6 +381,7 @@ export function generateTerrain(
   height: number,
 ): RawTerrain {
   const n = width * height;
+  const fresh = new Uint8Array(n);
   const rand = new PseudoRandom(params.seed);
   const s = rand.nextInt(0, 0x7fffffff);
   const aspect = width / height;
@@ -559,7 +562,11 @@ export function generateTerrain(
       const hill = clamp01((rugged[i] - tHigh) / (1 - tHigh + 1e-6));
       flow[i] = (elev[i] - sea) / (max - sea) + 0.5 * hill;
     }
+    const before = type.slice();
     carveRivers(params, type, flow, width, height, s);
+    for (let i = 0; i < n; i++) {
+      if (before[i] === LAND && type[i] === WATER) fresh[i] = 1;
+    }
   }
 
   const mag = new Uint8Array(n);
@@ -576,7 +583,7 @@ export function generateTerrain(
       mag[i] = Math.min(9, Math.floor(inland[i] * 10));
     }
   }
-  return { width, height, type, mag };
+  return { width, height, type, mag, fresh };
 }
 
 /**
@@ -1106,7 +1113,10 @@ function pack(t: Tiles): { data: Uint8Array; land: number } {
       b |= 0x80 | Math.min(t.mag[i], 31);
       land++;
     } else {
-      if (t.ocean[i]) b |= 0x20;
+      // Rivers drain into the sea, so they join the ocean water body, but
+      // they aren't open sea: a pocket on a river bank must not count as
+      // coastal (PlayerExecution only spares ocean-shore pockets).
+      if (t.ocean[i] && !t.fresh?.[i]) b |= 0x20;
       b |= Math.min((t.dist[i] + 1) >> 1, 31);
     }
     data[i] = b;

@@ -150,3 +150,18 @@ test("generated maps have no tiny islands", () => {
   expect(small).toBeLessThanOrEqual(Math.max(2, Math.floor(pieces / 4)));
   expect(min).toBeGreaterThan(MIN_ISLET);
 });
+
+test("rivers and lakes are not flagged as ocean", () => {
+  // Pockets on a river bank must not count as coastal (PlayerExecution only
+  // spares ocean-shore enclaves), even though rivers drain into the sea.
+  const nonOceanWater = (rivers: number) =>
+    generateRandomMap({
+      seed: 42,
+      landPercent: 40,
+      style: "continents",
+      size: "small",
+      mountains: 50,
+      rivers,
+    }).mapBin.filter((b) => (b & 0x80) === 0 && (b & 0x20) === 0).length;
+  expect(nonOceanWater(100)).toBeGreaterThan(nonOceanWater(0) + 1000);
+});
