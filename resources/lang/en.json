@@ -142,7 +142,7 @@
       "city": "Increases max population",
       "defense_post": "Increases defenses of nearby borders",
       "factory": "Creates railroads and spawns trains",
-      "farm": "Raises happiness: faster troop growth, fewer rebellions",
+      "farm": "Raises happiness: faster troop growth, fewer rebellions. More when linked by rail to a city. Not on mountains",
       "hydrogen_bomb": "Large explosion",
       "land_bomb": "Raises new land from the sea. Bridge straits, make islands",
       "mirv": "Huge explosion, only targets selected player",

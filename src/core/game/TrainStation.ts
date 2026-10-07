@@ -60,6 +60,9 @@ export function createTrainStopHandlers(
     [UnitType.City]: new TradeStationStopHandler(),
     [UnitType.Port]: new TradeStationStopHandler(),
     [UnitType.Factory]: new FactoryStopHandler(),
+    // Farms are pass-through stations: no trade gold, never a destination
+    // (Cluster.isTradeStation), not a trade stop (TrainExecution).
+    [UnitType.Farm]: new FactoryStopHandler(),
   };
 }
 

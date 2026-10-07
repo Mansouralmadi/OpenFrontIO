@@ -259,6 +259,14 @@ export const Structures = unitTypeGroup([
   UnitType.Farm,
 ] as const);
 
+// Structures that become train stations (see TrainStationExecution).
+export const RailStations = unitTypeGroup([
+  UnitType.City,
+  UnitType.Port,
+  UnitType.Factory,
+  UnitType.Farm,
+] as const);
+
 export const BuildMenus = unitTypeGroup([
   ...Structures.types,
   ...BuildableAttacks.types,

@@ -209,15 +209,17 @@ export const JwksSchema = z.object({
 /** SAM launcher construction duration in ticks (non-instant-build). */
 export const SAM_CONSTRUCTION_TICKS = 30 * 10;
 
-// Farm cost doubles per farm level owned, like the factory: 100K, 200K, 400K,
-// then FARM_MAX_COST. Farms build on any owned land (same rules as a city).
-const FARM_BASE_COST = 100_000;
-const FARM_MAX_COST = 500_000;
+// Farm cost rises linearly per farm level owned, like the SAM launcher: 125K,
+// 250K, 375K ... capped at FARM_MAX_COST. Farms build on owned land like a
+// city, but never on mountains (PlayerImpl.farmSpawn).
+const FARM_STEP_COST = 125_000;
+const FARM_MAX_COST = 1_000_000;
 
 // HAPPINESS: a per-player 0..100 integer, recomputed every
 // recomputeIntervalTicks (see Happiness.ts). base, + farms (perFarmLevel per
 // level for the first farmFullLevels levels, then perFarmLevelLate, capped at
-// farmMax), - unintegrated land (penaltyPerUnintegratedPercent per percent of
+// farmMax; a level of a farm on a rail cluster with one of the owner's
+// completed cities counts connectedFarmWeight levels), - unintegrated land (penaltyPerUnintegratedPercent per percent of
 // owned land that is unintegrated, capped at unintegratedMaxPenalty). Early
 // expansion is all new land, so the penalty is off for penaltyGraceTicks after
 // the spawn phase and then phases in linearly over penaltyRampTicks: everyone
@@ -230,7 +232,7 @@ const FARM_MAX_COST = 500_000;
 // The same pass sets the integration bonus (tiles/tick added to the
 // empire-wide integration): perFactoryLevel per completed factory level, plus
 // perConnectedStructure per other completed structure whose rail cluster holds
-// another of the owner's cities, capped at integrationBonusMax.
+// another of the owner's cities (farms included), capped at integrationBonusMax.
 const HAPPINESS = {
   recomputeIntervalTicks: 10,
   base: 50,
@@ -238,6 +240,7 @@ const HAPPINESS = {
   farmFullLevels: 5,
   perFarmLevelLate: 3,
   farmMax: 40,
+  connectedFarmWeight: 1.5,
   penaltyPerUnintegratedPercent: 0.6,
   unintegratedMaxPenalty: 40,
   penaltyGraceTicks: 60 * 10,
@@ -850,7 +853,7 @@ export class Config {
         info = {
           cost: this.costWrapper(
             (numUnits: number) =>
-              Math.min(FARM_MAX_COST, pow2(numUnits) * FARM_BASE_COST),
+              Math.min(FARM_MAX_COST, (numUnits + 1) * FARM_STEP_COST),
             UnitType.Farm,
           ),
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
@@ -1227,7 +1230,8 @@ export class Config {
   }
 
   /**
-   * Happiness (0..100) from completed farm levels and the unintegrated share.
+   * Happiness (0..100) from completed farm levels (fractional when weighted by
+   * connectedFarmWeight; the farm bonus is floored) and the unintegrated share.
    * `ticksSinceStart` (ticks since the spawn phase ended) phases the
    * unintegrated penalty in; omitted, it applies in full.
    */
@@ -1240,9 +1244,8 @@ export class Config {
     const h = HAPPINESS;
     const early = Math.min(farmLevels, h.farmFullLevels);
     const late = Math.max(farmLevels - h.farmFullLevels, 0);
-    const farms = Math.min(
-      h.farmMax,
-      early * h.perFarmLevel + late * h.perFarmLevelLate,
+    const farms = Math.floor(
+      Math.min(h.farmMax, early * h.perFarmLevel + late * h.perFarmLevelLate),
     );
     const percent = tiles > 0 ? (unintegrated * 100) / tiles : 0;
     let penalty = Math.min(

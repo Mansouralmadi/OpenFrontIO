@@ -17,6 +17,7 @@ import { TestConfig } from "../../util/TestConfig";
 
 export const W = "W"; // Water
 export const L = "L"; // Land
+export const M = "M"; // Mountain land (magnitude 25)
 
 // Terrain encoding
 const WATER_BIT = 0x20;
@@ -84,8 +85,8 @@ export function createGame(
   let numLand = 0;
 
   for (let i = 0; i < grid.length; i++) {
-    if (grid[i] === L) {
-      terrain[i] = LAND_BIT;
+    if (grid[i] === L || grid[i] === M) {
+      terrain[i] = grid[i] === M ? LAND_BIT | 25 : LAND_BIT;
       numLand++;
     } else {
       terrain[i] = WATER_BIT;

@@ -1,4 +1,4 @@
-import { Game, Player, Structures, UnitType } from "../game/Game";
+import { Game, Player, Structures, Unit, UnitType } from "../game/Game";
 import type { Cluster } from "../game/TrainStation";
 
 /**
@@ -7,19 +7,30 @@ import type { Cluster } from "../game/TrainStation";
  */
 export function refreshHappiness(game: Game, player: Player): void {
   const config = game.config();
+  const h = config.happinessConfig();
+  const connected = cityConnection(game, player);
+  // Rail-linked farm levels weigh connectedFarmWeight each.
+  let farmLevels = player.totalUnitLevels(UnitType.Farm);
+  for (const farm of player.units(UnitType.Farm)) {
+    if (connected(farm))
+      farmLevels += (h.connectedFarmWeight - 1) * farm.level();
+  }
   player.setHappiness(
     config.happiness(
-      player.totalUnitLevels(UnitType.Farm),
+      farmLevels,
       player.unintegratedTiles(),
       player.numTilesOwned(),
       game.ticksSinceStart(),
     ),
   );
-  player.setIntegrationBonus(integrationBonus(game, player));
+  player.setIntegrationBonus(integrationBonus(game, player, connected));
 }
 
-function integrationBonus(game: Game, player: Player): number {
-  const h = game.config().happinessConfig();
+/**
+ * Whether a completed structure's rail cluster holds another of the owner's
+ * completed cities.
+ */
+function cityConnection(game: Game, player: Player): (unit: Unit) => boolean {
   const stations = game.railNetwork().stationManager();
   // Rail clusters -> how many of this player's completed cities they hold.
   const citiesIn = new Map<Cluster, number>();
@@ -28,6 +39,21 @@ function integrationBonus(game: Game, player: Player): number {
     const cluster = stations.findStation(city)?.getCluster();
     if (cluster) citiesIn.set(cluster, (citiesIn.get(cluster) ?? 0) + 1);
   }
+  return (unit) => {
+    if (unit.isUnderConstruction()) return false;
+    const cluster = stations.findStation(unit)?.getCluster();
+    if (!cluster) return false;
+    const self = unit.type() === UnitType.City ? 1 : 0;
+    return (citiesIn.get(cluster) ?? 0) > self;
+  };
+}
+
+function integrationBonus(
+  game: Game,
+  player: Player,
+  connected: (unit: Unit) => boolean,
+): number {
+  const h = game.config().happinessConfig();
   let bonus = 0;
   for (const unit of player.units()) {
     if (!Structures.has(unit.type()) || unit.isUnderConstruction()) continue;
@@ -35,10 +61,7 @@ function integrationBonus(game: Game, player: Player): number {
       bonus += h.perFactoryLevel * unit.level();
       continue;
     }
-    const cluster = stations.findStation(unit)?.getCluster();
-    if (!cluster) continue;
-    const self = unit.type() === UnitType.City ? 1 : 0;
-    if ((citiesIn.get(cluster) ?? 0) > self) bonus += h.perConnectedStructure;
+    if (connected(unit)) bonus += h.perConnectedStructure;
   }
   return Math.min(h.integrationBonusMax, bonus);
 }

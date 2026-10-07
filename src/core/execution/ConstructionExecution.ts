@@ -167,7 +167,10 @@ export class ConstructionExecution implements Execution {
         this.mg.addExecution(new FactoryExecution(this.structure!));
         break;
       case UnitType.Farm:
-        break; // Passive: Config.troopIncreaseRate counts completed farms.
+        // Same one-time "factory in range -> become a train station" check as
+        // a city; happiness counts completed farms (see Happiness.ts).
+        this.mg.addExecution(new CityExecution(this.structure!));
+        break;
       default:
         console.warn(
           `unit type ${this.constructionType} cannot be constructed`,

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Execution, Game, Unit, UnitType } from "../game/Game";
+import { Execution, Game, RailStations, Unit } from "../game/Game";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type {
   ExecRecord,
@@ -43,7 +43,7 @@ export class FactoryExecution implements Execution {
     const structures = this.game.nearbyUnits(
       this.factory.tile()!,
       this.game.config().trainStationMaxRange(),
-      [UnitType.City, UnitType.Port, UnitType.Factory],
+      RailStations.types,
     );
 
     this.game.addExecution(new TrainStationExecution(this.factory, true));

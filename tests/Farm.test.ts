@@ -12,10 +12,11 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
+  TerrainType,
   UnitType,
 } from "../src/core/game/Game";
 import { PseudoRandom } from "../src/core/PseudoRandom";
-import { createGame, L } from "./core/pathfinding/_fixtures";
+import { createGame, L, M } from "./core/pathfinding/_fixtures";
 import { setup } from "./util/Setup";
 import { expectSnapshotRoundTrip } from "./util/Snapshot";
 import { executeTicks } from "./util/utils";
@@ -228,6 +229,74 @@ describe("Happiness and rebellions", () => {
 });
 
 describe("Integration bonus", () => {
+  test("a farm joins the rail network and, linked to a city, counts 1.5x and integrates", async () => {
+    const { game, a } = await twoPlayers({
+      instantBuild: true,
+      infiniteGold: true,
+    });
+    integrateAll(a);
+    game.addExecution(
+      new ConstructionExecution(a, UnitType.Factory, game.ref(10, 10)),
+    );
+    executeTicks(game, 3);
+    game.addExecution(
+      new ConstructionExecution(a, UnitType.City, game.ref(25, 12)),
+      new ConstructionExecution(a, UnitType.Farm, game.ref(12, 30)),
+    );
+    executeTicks(game, 5);
+    const farm = a.units(UnitType.Farm)[0];
+    const city = a.units(UnitType.City)[0];
+    expect(farm.hasTrainStation()).toBe(true);
+    const stations = game.railNetwork().stationManager();
+    const cluster = stations.findStation(farm)?.getCluster();
+    expect(cluster).toBeTruthy();
+    expect(stations.findStation(city)?.getCluster()).toBe(cluster);
+    expect(farm.isActive()).toBe(true);
+
+    refreshHappiness(game, a);
+    // 3 (factory level) + 1 (connected farm); the lone city has no other city.
+    expect(a.integrationBonus()).toBe(4);
+    expect(a.happiness()).toBe(59); // 50 + 1.5 levels * 6
+
+    // Without a rail link a farm level is worth the plain 6.
+    const plain = await twoPlayers({ instantBuild: true, infiniteGold: true });
+    integrateAll(plain.a);
+    plain.a.buildUnit(UnitType.City, plain.game.ref(25, 12), {});
+    plain.a.buildUnit(UnitType.Farm, plain.game.ref(12, 30), {});
+    refreshHappiness(plain.game, plain.a);
+    expect(plain.a.happiness()).toBe(56);
+    expect(plain.a.integrationBonus()).toBe(0);
+
+    // Connected levels stay inside the +40 farm cap.
+    game.addExecution(new UpgradeStructureExecution(a, farm.id(), 9));
+    executeTicks(game, 1);
+    refreshHappiness(game, a);
+    expect(a.happiness()).toBe(90);
+  });
+
+  test("a farm built before the factory is promoted to a station", async () => {
+    const { game, a } = await twoPlayers({
+      instantBuild: true,
+      infiniteGold: true,
+    });
+    game.addExecution(
+      new ConstructionExecution(a, UnitType.Farm, game.ref(12, 30)),
+    );
+    executeTicks(game, 3);
+    const farm = a.units(UnitType.Farm)[0];
+    expect(farm.hasTrainStation()).toBe(false);
+    game.addExecution(
+      new ConstructionExecution(a, UnitType.Factory, game.ref(10, 10)),
+    );
+    executeTicks(game, 5);
+    expect(farm.hasTrainStation()).toBe(true);
+    const stations = game.railNetwork().stationManager();
+    const factory = a.units(UnitType.Factory)[0];
+    expect(stations.findStation(farm)?.getCluster()).toBe(
+      stations.findStation(factory)?.getCluster(),
+    );
+  });
+
   test("factories and rail-connected structures speed integration, capped", async () => {
     const { game, a } = await twoPlayers({ instantBuild: true });
     const c = game.config();
@@ -277,18 +346,62 @@ describe("Integration bonus", () => {
 });
 
 describe("Farm", () => {
-  test("cost starts at 100K and doubles per farm level owned, capped at 500K", async () => {
+  test("cost rises 125K per farm level owned, capped at 1M", async () => {
     const { game, a } = await twoPlayers();
-    a.addGold(10_000_000n);
+    a.addGold(100_000_000n);
     const cost = () => game.unitInfo(UnitType.Farm).cost(game, a);
-    expect(cost()).toBe(100_000n);
+    expect(cost()).toBe(125_000n);
     const farm = a.buildUnit(UnitType.Farm, game.ref(10, 10), {});
-    expect(cost()).toBe(200_000n);
+    expect(cost()).toBe(250_000n);
     a.upgradeUnit(farm);
-    expect(cost()).toBe(400_000n);
+    expect(cost()).toBe(375_000n);
     a.buildUnit(UnitType.Farm, game.ref(30, 30), {});
     expect(cost()).toBe(500_000n);
+    for (let i = 0; i < 3; i++) a.upgradeUnit(farm);
+    expect(cost()).toBe(875_000n);
+    a.upgradeUnit(farm);
+    expect(cost()).toBe(1_000_000n);
+    a.upgradeUnit(farm);
+    expect(cost()).toBe(1_000_000n);
     expect(game.unitInfo(UnitType.Farm).upgradable).toBe(true);
+  });
+
+  test("can't be built on (or snapped onto) mountains", () => {
+    // 60x60 land with a mountain block at x/y 20..39.
+    const size = 60;
+    const grid: string[] = [];
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const mountain = x >= 20 && x < 40 && y >= 20 && y < 40;
+        grid.push(mountain ? M : L);
+      }
+    }
+    const game = createGame({ width: size, height: size, grid });
+    const a = game.addPlayer(
+      new PlayerInfo("a", PlayerType.Human, "client_a", "a"),
+    );
+    game.map().forEachTile((t) => a.conquer(t));
+    const mountain = game.ref(30, 30);
+    expect(game.terrainType(mountain)).toBe(TerrainType.Mountain);
+    a.addGold(1_000_000n);
+
+    expect(a.canBuild(UnitType.Farm, mountain)).toBe(false);
+    expect(a.canBuild(UnitType.City, mountain)).toBe(mountain);
+    // The build preview asks the same question.
+    const preview = a
+      .buildableUnits(mountain, [UnitType.Farm])
+      .find((u) => u.type === UnitType.Farm);
+    expect(preview?.canBuild).toBe(false);
+    // Next to the mountains: snaps to plains only.
+    const spot = a.canBuild(UnitType.Farm, game.ref(19, 30));
+    expect(spot).not.toBe(false);
+    expect(game.terrainType(spot as number)).not.toBe(TerrainType.Mountain);
+
+    const gold = a.gold();
+    game.addExecution(new ConstructionExecution(a, UnitType.Farm, mountain));
+    executeTicks(game, 3);
+    expect(a.units(UnitType.Farm)).toHaveLength(0);
+    expect(a.gold()).toBeGreaterThanOrEqual(gold);
   });
 
   test("can't build when disabled", async () => {
@@ -320,6 +433,8 @@ describe("Farm", () => {
     executeTicks(game, 13);
     expect(a.totalUnitLevels(UnitType.Farm)).toBe(3);
     expect(a.integrationBonus()).toBe(3);
+    // The completed farm is a rail station (the new one is still building).
+    expect(a.units(UnitType.Farm)[0].hasTrainStation()).toBe(true);
     await expectSnapshotRoundTrip(game, BIG, 40);
   });
 });

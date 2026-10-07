@@ -5,7 +5,7 @@ import type {
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
 import { snapshotType, zInt, zRef } from "../snapshot/SnapshotType";
-import { Game, Unit, UnitType } from "./Game";
+import { Game, RailStations, Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
 import { GameUpdateType } from "./GameUpdates";
 import { RailNetwork } from "./RailNetwork";
@@ -252,7 +252,7 @@ export class RailNetworkImpl implements RailNetwork {
   }
 
   overlappingRailroads(unitType: UnitType, tile: TileRef): TileRef[] {
-    if (![UnitType.City, UnitType.Port, UnitType.Factory].includes(unitType)) {
+    if (!RailStations.has(unitType)) {
       return [];
     }
     const tiles = new Set<TileRef>();
@@ -269,7 +269,7 @@ export class RailNetworkImpl implements RailNetwork {
   }
 
   computeGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][] {
-    if (![UnitType.City, UnitType.Port, UnitType.Factory].includes(unitType)) {
+    if (!RailStations.has(unitType)) {
       return [];
     }
 
@@ -281,7 +281,7 @@ export class RailNetworkImpl implements RailNetwork {
     const minRangeSquared = this.game.config().trainStationMinRange() ** 2;
     const maxPathSize = this.game.config().railroadMaxSize();
 
-    // A City or Port only joins the rail network when a Factory is already in
+    // A City, Port or Farm only joins the rail network when a Factory is already in
     // range (see CityExecution/PortExecution). A Factory always becomes a
     // station and pulls nearby City/Port/Factory into the network itself, so
     // it needs no pre-existing factory to connect to.
@@ -297,6 +297,7 @@ export class RailNetworkImpl implements RailNetwork {
       UnitType.City,
       UnitType.Factory,
       UnitType.Port,
+      UnitType.Farm,
     ]);
     neighbors.sort((a, b) => a.distSquared - b.distSquared);
 
@@ -334,7 +335,9 @@ export class RailNetworkImpl implements RailNetwork {
       // factory promotes it after creating its own station. The city then
       // initiates the real connection back to the factory.
       const path =
-        !neighborStation && neighbor.unit.type() === UnitType.City
+        !neighborStation &&
+        (neighbor.unit.type() === UnitType.City ||
+          neighbor.unit.type() === UnitType.Farm)
           ? this.pathService.findTilePath(targetTile, tile)
           : this.pathService.findTilePath(tile, targetTile);
       if (path.length > 0 && path.length < maxPathSize) {
@@ -352,7 +355,7 @@ export class RailNetworkImpl implements RailNetwork {
     const neighbors = this.game.nearbyUnits(
       station.tile(),
       this.game.config().trainStationMaxRange(),
-      [UnitType.City, UnitType.Factory, UnitType.Port],
+      [UnitType.City, UnitType.Factory, UnitType.Port, UnitType.Farm],
     );
 
     const editedClusters = new Set<Cluster>();

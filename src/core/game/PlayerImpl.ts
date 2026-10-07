@@ -63,6 +63,7 @@ import {
   Relation,
   Structures,
   Team,
+  TerrainType,
   TerraNullius,
   Tick,
   Unit,
@@ -1830,8 +1831,9 @@ export class PlayerImpl implements Player {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
-      case UnitType.Farm:
         return this.landBasedStructureSpawn(targetTile, validTiles);
+      case UnitType.Farm:
+        return this.farmSpawn(targetTile, validTiles);
       default:
         assertNever(unitType);
     }
@@ -1948,6 +1950,18 @@ export class PlayerImpl implements Player {
       return false;
     }
     return tiles[0];
+  }
+
+  /** Like landBasedStructureSpawn, but never on (or snapped onto) a mountain. */
+  private farmSpawn(
+    tile: TileRef,
+    validTiles: TileRef[] | null,
+  ): TileRef | false {
+    const mountain = (t: TileRef) =>
+      this.mg.terrainType(t) === TerrainType.Mountain;
+    if (mountain(tile)) return false;
+    const tiles = validTiles ?? this.validStructureSpawnTiles(tile);
+    return tiles.find((t) => !mountain(t)) ?? false;
   }
 
   private validStructureSpawnTiles(tile: TileRef): TileRef[] {
