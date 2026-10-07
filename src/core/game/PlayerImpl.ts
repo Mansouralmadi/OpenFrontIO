@@ -68,6 +68,7 @@ import {
   Unit,
   UnitParams,
   UnitType,
+  UnrestWarning,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
@@ -195,6 +196,8 @@ export class PlayerImpl implements Player {
   private _mercenaries = 0;
   private _happiness = 50;
   private _integrationBonus = 0;
+  private _fervorUntil = 0;
+  private _unrest: UnrestWarning | null = null;
   private _mercenaryExpiresAt = 0;
   private _mercenaryHireTicks: Tick[] = [];
 
@@ -420,6 +423,10 @@ export class PlayerImpl implements Player {
       mercenaryExpiresAt: this._mercenaryExpiresAt,
       recentMercenaryHires: this.recentMercenaryHires(),
       happiness: this._happiness,
+      fervorUntil: this._fervorUntil,
+      unrestTiles: this._unrest?.tiles ?? 0,
+      unrestTick: this._unrest?.tick ?? 0,
+      unrestTile: this._unrest?.tile ?? 0,
       gold: this._gold,
       tradeGold: this._tradeGold,
       trainGold: this._trainGold,
@@ -649,6 +656,22 @@ export class PlayerImpl implements Player {
 
   setIntegrationBonus(bonus: number): void {
     this._integrationBonus = bonus;
+  }
+
+  fervorUntil(): Tick {
+    return this._fervorUntil;
+  }
+
+  setFervorUntil(tick: Tick): void {
+    this._fervorUntil = tick;
+  }
+
+  unrest(): UnrestWarning | null {
+    return this._unrest;
+  }
+
+  setUnrest(unrest: UnrestWarning | null): void {
+    this._unrest = unrest;
   }
 
   mercenaryExpiresAt(): Tick {
@@ -2217,6 +2240,8 @@ export class PlayerImpl implements Player {
       mercenaryHireTicks: [...this._mercenaryHireTicks],
       happiness: this._happiness,
       integrationBonus: this._integrationBonus,
+      fervorUntil: this._fervorUntil,
+      unrest: this._unrest === null ? null : { ...this._unrest },
       integrationQueue: w.tiles(this._integrationQueue),
       integrationHead: this.integrationHead,
       integrationBase: this.integrationBase,
@@ -2302,6 +2327,8 @@ export class PlayerImpl implements Player {
     this._mercenaryHireTicks = [...s.mercenaryHireTicks];
     this._happiness = s.happiness;
     this._integrationBonus = s.integrationBonus;
+    this._fervorUntil = s.fervorUntil;
+    this._unrest = s.unrest === null ? null : { ...s.unrest };
     this._integrationQueue = Array.from(s.integrationQueue);
     this.integrationHead = s.integrationHead;
     this.integrationBase = s.integrationBase;
@@ -2353,7 +2380,7 @@ export class PlayerImpl implements Player {
 
 export const PlayerSnapshot = snapshotType({
   name: "Player",
-  version: 7,
+  version: 8,
   migrations: {
     // v2: tall economy integration backlog; older games had none.
     1: (d) => ({ ...d, unintegratedTiles: 0 }),
@@ -2379,6 +2406,8 @@ export const PlayerSnapshot = snapshotType({
     5: (d) => ({ ...d, happiness: 50, integrationBonus: 0 }),
     // v7: peak land for remnant elimination; older games start counting now.
     6: (d) => ({ ...d, peakTiles: 0 }),
+    // v8: revolutionary fervor and the unrest warning.
+    7: (d) => ({ ...d, fervorUntil: 0, unrest: null }),
   },
   schema: z.object({
     smallID: zInt(),
@@ -2415,6 +2444,8 @@ export const PlayerSnapshot = snapshotType({
     mercenaryHireTicks: z.array(zInt()),
     happiness: zInt(),
     integrationBonus: zInt(),
+    fervorUntil: zInt(),
+    unrest: z.object({ tiles: zInt(), tick: zInt(), tile: zInt() }).nullable(),
     borderTiles: zTiles(),
     units: z.array(zRef()),
     unitsVersion: zInt(),

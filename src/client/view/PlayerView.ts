@@ -18,6 +18,7 @@ import {
   Team,
   Tick,
   UnitType,
+  UnrestWarning,
 } from "../../core/game/Game";
 import { TileRef } from "../../core/game/GameMap";
 import { applyStateUpdate } from "../../core/game/GameUpdateUtils";
@@ -450,6 +451,15 @@ export class PlayerView {
   }
   happiness(): number {
     return this.state.happiness;
+  }
+  fervorUntil(): number {
+    return this.state.fervorUntil;
+  }
+  unrest(): UnrestWarning | null {
+    const s = this.state;
+    return s.unrestTiles > 0
+      ? { tiles: s.unrestTiles, tick: s.unrestTick, tile: s.unrestTile }
+      : null;
   }
   adminCapacity(): number {
     const config = this.game.config();

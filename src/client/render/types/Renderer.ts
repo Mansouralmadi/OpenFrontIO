@@ -71,6 +71,11 @@ export interface PlayerState {
   mercenaryExpiresAt: number;
   recentMercenaryHires: number;
   happiness: number;
+  fervorUntil: number;
+  /** 0 = no region about to rebel. */
+  unrestTiles: number;
+  unrestTick: number;
+  unrestTile: number;
   gold: number;
   /** Cumulative ship-trade revenue (live, from PlayerUpdate). */
   tradeGold: number;

@@ -26,6 +26,10 @@ function makePlayerState(overrides: Partial<PlayerState> = {}): PlayerState {
     mercenaryExpiresAt: 0,
     recentMercenaryHires: 0,
     happiness: 50,
+    fervorUntil: 0,
+    unrestTiles: 0,
+    unrestTick: 0,
+    unrestTile: 0,
     gold: 0,
     tradeGold: 0,
     trainGold: 0,
@@ -78,6 +82,29 @@ describe("diffPlayerUpdate", () => {
     expect(diff.betrayals).toBe(1);
     expect(diff.isTraitor).toBe(true);
     expect(diff.hasSpawned).toBeUndefined();
+  });
+
+  it("carries changed fervor and unrest fields", () => {
+    const prev = makePlayerUpdate({
+      fervorUntil: 0,
+      unrestTiles: 0,
+      unrestTick: 0,
+      unrestTile: 0,
+    });
+    const next = makePlayerUpdate({
+      fervorUntil: 4200,
+      unrestTiles: 150,
+      unrestTick: 3900,
+      unrestTile: 777,
+    });
+    expect(diffPlayerUpdate(prev, next)).toEqual({
+      type: GameUpdateType.Player,
+      id: "player-a",
+      fervorUntil: 4200,
+      unrestTiles: 150,
+      unrestTick: 3900,
+      unrestTile: 777,
+    });
   });
 
   it("carries a changed clanTag and stays quiet when it is unchanged", () => {
@@ -345,8 +372,16 @@ describe("applyStateUpdate", () => {
         mercenaryExpiresAt: 3000,
         recentMercenaryHires: 2,
         happiness: 23,
+        fervorUntil: 4200,
+        unrestTiles: 150,
+        unrestTick: 3900,
+        unrestTile: 777,
       }),
     );
+    expect(target.fervorUntil).toBe(4200);
+    expect(target.unrestTiles).toBe(150);
+    expect(target.unrestTick).toBe(3900);
+    expect(target.unrestTile).toBe(777);
     expect(target.unintegratedTiles).toBe(321);
     expect(target.mercenaries).toBe(1200);
     expect(target.mercenaryExpiresAt).toBe(3000);
